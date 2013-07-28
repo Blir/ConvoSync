@@ -1,5 +1,6 @@
 package com.minepop.servegame.convosync;
 
+import com.earth2me.essentials.Essentials;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -26,24 +27,38 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public class ConvoSync extends JavaPlugin implements Listener {
 
+    private enum Action {
+
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS
+    }
     private int port;
     private String ip, password;
     private BufferedReader in;
     private PrintWriter out;
     private Socket socket;
-    private boolean connected, shouldBe = true, verified;
-    private com.earth2me.essentials.UserMap map;
-    private List<User> users = new ArrayList<>();
-    private List<ChatListener> listeners = new ArrayList<>();
+    private boolean connected, shouldBe = true, verified, isEss;
+    private Essentials ess;
+    private List<User> users = new ArrayList<User>();
+    private List<ChatListener> listeners = new ArrayList<ChatListener>();
 
     @Override
     public void onEnable() {
-        getServer().getPluginManager().registerEvents(this, this);
+        if (getServer().getPluginManager().isPluginEnabled("Essentials")) {
+            RegisteredServiceProvider<Essentials> rsp;
+            rsp = getServer().getServicesManager().getRegistration(Essentials.class);
+            if (rsp != null) {
+                ess = rsp.getProvider();
+                if (ess != null) {
+                    isEss = true;
+                }
+            }
+        }
         try {
             port = getConfig().getInt("port");
             ip = getConfig().getString("ip");
             password = getConfig().getString("password");
-        } catch (NumberFormatException | NullPointerException e) {
+        } catch (NumberFormatException ex) {
+        } catch (NullPointerException ex) {
         }
         if (ip == null || ip.equals("null") || port == 0 || password == null || password.equals("null")) {
             getLogger().warning("IP, port, or password missing.");
@@ -57,6 +72,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 }
             }
         }
+        getServer().getPluginManager().registerEvents(this, this);
     }
 
     @Override
@@ -78,78 +94,74 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        switch (cmd.getName().toLowerCase()) {
-            case "convosync":
-                if (args.length < 1) {
-                    return false;
-                }
-                switch (args[0].toLowerCase()) {
-                    case "setip":
-                        if (args.length != 2) {
-                            sender.sendMessage("§c/convosync setip <ip>");
-                            return true;
-                        }
-                        if (connected) {
-                            sender.sendMessage("§cThe server is currently connected. Please disconnect first.");
-                            return true;
-                        }
-                        ip = args[1];
-                        sender.sendMessage("§aNow using IP §9" + ip + "§a.");
+        if (cmd.getName().equals("crosstalk") && args.length > 1) {
+            switch (Action.valueOf(args[0].toUpperCase())) {
+                case SETIP:
+                    if (args.length != 2) {
+                        sender.sendMessage("§c/convosync setip <ip>");
                         return true;
-                    case "setport":
-                        if (args.length != 2) {
-                            sender.sendMessage("§c/convosync setport <port>");
-                            return true;
-                        }
-                        if (connected) {
-                            sender.sendMessage("§cThe server is currently connected. Please disconnect first.");
-                            return true;
-                        }
-                        try {
-                            port = Integer.parseInt(args[1]);
-                        } catch (NumberFormatException ex) {
-                            sender.sendMessage("You did not enter a valid number.");
-                            return true;
-                        }
-                        sender.sendMessage("§aNowing using port §9" + port + "§a.");
+                    }
+                    if (connected) {
+                        sender.sendMessage("§cThe server is currently connected. Please disconnect first.");
                         return true;
-                    case "reconnect":
-                        if (connected) {
-                            try {
-                                shouldBe = false;
-                                disconnect();
-                            } catch (IOException ex) {
-                                getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
-                            }
-                        }
-                        try {
-                            shouldBe = true;
-                            connect();
-                        } catch (IOException ex) {
-                            getLogger().log(Level.WARNING, "Error connecting to server: {0}", ex.toString());
-                        }
-
-                        sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aAuthentication status: §9" + verified);
-                        sender.sendMessage("§aEssentials status: §9" + (map != null));
+                    }
+                    ip = args[1];
+                    sender.sendMessage("§aNow using IP §9" + ip + "§a.");
+                    return true;
+                case SETPORT:
+                    if (args.length != 2) {
+                        sender.sendMessage("§c/convosync setport <port>");
                         return true;
-                    case "disconnect":
+                    }
+                    if (connected) {
+                        sender.sendMessage("§cThe server is currently connected. Please disconnect first.");
+                        return true;
+                    }
+                    try {
+                        port = Integer.parseInt(args[1]);
+                    } catch (NumberFormatException ex) {
+                        sender.sendMessage("You did not enter a valid number.");
+                        return true;
+                    }
+                    sender.sendMessage("§aNowing using port §9" + port + "§a.");
+                    return true;
+                case RECONNECT:
+                    if (connected) {
                         try {
                             shouldBe = false;
                             disconnect();
                         } catch (IOException ex) {
                             getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
                         }
-                        sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aAuthentication status: §9" + verified);
-                        sender.sendMessage("§aEssentials status: §9" + (map != null));
-                        return true;
-                    case "status":
-                        sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aAuthentication status: §9" + verified);
-                        sender.sendMessage("§aEssentials status: §9" + (map != null));
-                        return true;
-                }
+                    }
+                    try {
+                        shouldBe = true;
+                        connect();
+                    } catch (IOException ex) {
+                        getLogger().log(Level.WARNING, "Error connecting to server: {0}", ex.toString());
+                    }
+
+                    sender.sendMessage("§aConnection status: §9" + connected);
+                    sender.sendMessage("§aAuthentication status: §9" + verified);
+                    sender.sendMessage("§aEssentials status: §9" + isEss);
+                    return true;
+                case DISCONNECT:
+                    try {
+                        shouldBe = false;
+                        disconnect();
+                    } catch (IOException ex) {
+                        getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
+                    }
+                    sender.sendMessage("§aConnection status: §9" + connected);
+                    sender.sendMessage("§aAuthentication status: §9" + verified);
+                    sender.sendMessage("§aEssentials status: §9" + isEss);
+                    return true;
+                case STATUS:
+                    sender.sendMessage("§aConnection status: §9" + connected);
+                    sender.sendMessage("§aAuthentication status: §9" + verified);
+                    sender.sendMessage("§aEssentials status: §9" + isEss);
+                    return true;
+            }
         }
         return false;
     }
@@ -184,13 +196,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
     }
 
     private void connect() throws IOException {
-        if (getServer().getPluginManager().isPluginEnabled("Essentials")) {
-            RegisteredServiceProvider<com.earth2me.essentials.Essentials> rsp;
-            rsp = getServer().getServicesManager().getRegistration(com.earth2me.essentials.Essentials.class);
-            if (rsp != null) {
-                map = rsp.getProvider().getUserMap();
-            }
-        }
         if (ip == null || ip.equals("null") || port == 0 || password == null || password.equals("null")) {
             return;
         }
@@ -257,14 +262,14 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 }
             }
         }.start();
-        if (map != null) {
+        if (isEss) {
             new Thread() {
                 @Override
                 public void run() {
+                    getLogger().info("Essentials AFK Thread started!");
                     while (connected) {
-                        getLogger().info("Essentials AFK Thread started!");
                         for (Player player : getServer().getOnlinePlayers()) {
-                            com.earth2me.essentials.User user = map.getUser(player.getName());
+                            com.earth2me.essentials.User user = ess.getUser(player);
                             User csuser = getUser(user);
                             if (user.isAfk() != csuser.afk) {
                                 csuser.afk = user.isAfk();
@@ -291,6 +296,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         out("c has disconnected.");
         out.println("d");
         out.flush();
+        shouldBe = false;
         if (socket != null) {
             socket.close();
         }
@@ -298,7 +304,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     }
 
     private void autoReconnect(final int pausetime) {
-        if (!shouldBe) {
+        if (!shouldBe && !isEnabled()) {
             return;
         }
         getLogger().log(Level.INFO, "Attempting to reconnect every {0} seconds...", (int) Math.round(pausetime / 1000));
