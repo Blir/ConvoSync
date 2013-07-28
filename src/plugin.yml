@@ -1,0 +1,17 @@
+name: CrossTalk
+main: com.minepop.servegame.crosstalk.CrossTalk
+version: Beta 1.1
+author: Blir
+softdepend: [Essentials]
+commands:
+  crosstalk:
+    usage: §c/<command> <setip|setport|reconnect|status> [other parameters]
+    permission: crosstalk.crosstalk
+    permission-message: §cYou don't have permission to use this command.
+permissions:
+  crosstalk.*:
+    children:
+      crosstalk.crosstalk: true
+  crosstalk.crosstalk:
+    description: Allows use of the /crosstalk command.
+    

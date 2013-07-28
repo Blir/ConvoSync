@@ -1,0 +1,8 @@
+port: 25000
+ip: 127.0.0.1
+password: null
+auto-reconnect:
+  after-socket-close: false
+  after-socker-error: true
+  after-connect-fail: true
+  time-delay-ms: 30000
