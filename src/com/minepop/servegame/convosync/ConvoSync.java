@@ -130,7 +130,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         }
 
                         sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aVerification status: §9" + verified);
+                        sender.sendMessage("§aAuthentication status: §9" + verified);
                         sender.sendMessage("§aEssentials status: §9" + (map != null));
                         return true;
                     case "disconnect":
@@ -141,12 +141,12 @@ public class ConvoSync extends JavaPlugin implements Listener {
                             getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
                         }
                         sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aVerification status: §9" + verified);
+                        sender.sendMessage("§aAuthentication status: §9" + verified);
                         sender.sendMessage("§aEssentials status: §9" + (map != null));
                         return true;
                     case "status":
                         sender.sendMessage("§aConnection status: §9" + connected);
-                        sender.sendMessage("§aVerification status: §9" + verified);
+                        sender.sendMessage("§aAuthentication status: §9" + verified);
                         sender.sendMessage("§aEssentials status: §9" + (map != null));
                         return true;
                 }

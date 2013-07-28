@@ -1,17 +1,17 @@
-name: CrossTalk
-main: com.minepop.servegame.crosstalk.CrossTalk
+name: ConvoSync
+main: com.minepop.servegame.convosync.ConvoSync
 version: Beta 1.1
 author: Blir
 softdepend: [Essentials]
 commands:
-  crosstalk:
+  convosync:
     usage: §c/<command> <setip|setport|reconnect|status> [other parameters]
-    permission: crosstalk.crosstalk
+    permission: convosync.convosync
     permission-message: §cYou don't have permission to use this command.
 permissions:
-  crosstalk.*:
+  convosync.*:
     children:
-      crosstalk.crosstalk: true
-  crosstalk.crosstalk:
-    description: Allows use of the /crosstalk command.
+      convosync.convosync: true
+  convosync.convosync:
+    description: Allows use of the /convosync command.
     
