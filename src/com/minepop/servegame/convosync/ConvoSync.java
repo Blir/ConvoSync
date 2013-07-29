@@ -77,7 +77,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         getConfig().set("auto-reconnect.after-connect-fail", getConfig().getBoolean("auto-reconnect.after-connect-fail"));
         getConfig().set("auto-reconnect.after-socket-error", getConfig().getBoolean("auto-reconnect.after-socket-error"));
         getConfig().set("auto-reconnect.after-socket-close", getConfig().getBoolean("auto-reconnect.after-socket-close"));
-        getConfig().set("auto-reconnect.time-delay-ms", getConfig().getBoolean("auto-reconnect.time-delay-ms"));
+        getConfig().set("auto-reconnect.time-delay-ms", getConfig().getInt("auto-reconnect.time-delay-ms"));
         saveConfig();
     }
 
