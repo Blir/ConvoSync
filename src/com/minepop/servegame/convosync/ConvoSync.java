@@ -1,6 +1,5 @@
 package com.minepop.servegame.convosync;
 
-import com.earth2me.essentials.Essentials;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -18,7 +17,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -36,22 +34,14 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private BufferedReader in;
     private PrintWriter out;
     private Socket socket;
-    private boolean connected, shouldBe = true, verified, isEss;
-    private Essentials ess;
+    protected boolean connected, shouldBe = true, verified, isEss;
     private List<User> users = new ArrayList<User>();
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
 
     @Override
     public void onEnable() {
         if (getServer().getPluginManager().isPluginEnabled("Essentials")) {
-            RegisteredServiceProvider<Essentials> rsp;
-            rsp = getServer().getServicesManager().getRegistration(Essentials.class);
-            if (rsp != null) {
-                ess = rsp.getProvider();
-                if (ess != null) {
-                    isEss = true;
-                }
-            }
+            AFKThread.enable(this);
         }
         try {
             port = getConfig().getInt("port");
@@ -263,26 +253,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
             }
         }.start();
         if (isEss) {
-            new Thread() {
-                @Override
-                public void run() {
-                    getLogger().info("Essentials AFK Thread started!");
-                    while (connected) {
-                        for (Player player : getServer().getOnlinePlayers()) {
-                            com.earth2me.essentials.User user = ess.getUser(player);
-                            User csuser = getUser(user);
-                            if (user.isAfk() != csuser.afk) {
-                                csuser.afk = user.isAfk();
-                                out("c" + user.getDisplayName() + "§5 is no" + (user.isAfk() ? "w AFK." : " longer AFK."));
-                            }
-                        }
-                        try {
-                            Thread.sleep(250);
-                        } catch (InterruptedException ex) {
-                        }
-                    }
-                }
-            }.start();
+            new AFKThread().start();
         }
         getLogger().info(socket.toString());
     }
@@ -354,7 +325,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         out(list);
     }
 
-    private User getUser(com.earth2me.essentials.User user) {
+    protected User getUser(com.earth2me.essentials.User user) {
         for (User ctuser : users) {
             if (ctuser.name.equals(user.getName())) {
                 return ctuser;
@@ -376,9 +347,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
         public void onInput(String msg);
     }
 
-    private static class User {
+    protected static class User {
 
-        private String name;
-        private boolean afk;
+        protected String name;
+        protected boolean afk;
     }
 }
