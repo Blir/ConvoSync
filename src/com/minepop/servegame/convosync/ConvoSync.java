@@ -35,7 +35,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private PrintWriter out;
     private Socket socket;
     protected boolean connected, shouldBe = true, verified, isEss;
-    private List<User> users = new ArrayList<User>();
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
 
     @Override
@@ -84,7 +83,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
-        if (cmd.getName().equals("crosstalk") && args.length > 1) {
+        if (cmd.getName().equals("convosync") && args.length > 0) {
             switch (Action.valueOf(args[0].toUpperCase())) {
                 case SETIP:
                     if (args.length != 2) {
@@ -325,19 +324,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
         out(list);
     }
 
-    protected User getUser(com.earth2me.essentials.User user) {
-        for (User ctuser : users) {
-            if (ctuser.name.equals(user.getName())) {
-                return ctuser;
-            }
-        }
-        User csuser = new User();
-        csuser.name = user.getName();
-        csuser.afk = user.isAfk();
-        users.add(csuser);
-        return csuser;
-    }
-
     public boolean addChatListener(ChatListener listener) {
         return listeners.add(listener);
     }
@@ -345,11 +331,5 @@ public class ConvoSync extends JavaPlugin implements Listener {
     public interface ChatListener {
 
         public void onInput(String msg);
-    }
-
-    protected static class User {
-
-        protected String name;
-        protected boolean afk;
     }
 }
