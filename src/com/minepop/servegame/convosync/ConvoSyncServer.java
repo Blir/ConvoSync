@@ -15,11 +15,15 @@ import java.util.Scanner;
  */
 public class ConvoSyncServer {
 
+    private enum Command {
+
+        EXIT, STOP, RESTART, KICK, LIST, NAME, HELP
+    }
     private int port;
     private ServerSocket socket;
     private Scanner in;
     private boolean open = true;
-    private final ArrayList<Client> clients = new ArrayList<>();
+    private final ArrayList<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
 
     /**
@@ -44,7 +48,9 @@ public class ConvoSyncServer {
                 } else if (arg.startsWith("PluginPassword:")) {
                     pluginPassword = arg.split(":")[1];
                 }
-            } catch (NumberFormatException | ArrayIndexOutOfBoundsException ex) {
+            } catch (NumberFormatException ex) {
+                System.out.println("Invalid argument: " + arg);
+            } catch (ArrayIndexOutOfBoundsException ex) {
                 System.out.println("Invalid argument: " + arg);
             }
         }
@@ -111,9 +117,9 @@ public class ConvoSyncServer {
                         } else {
                             cmd = input.substring(1);
                         }
-                        switch (cmd.toLowerCase()) {
-                            case "exit":
-                            case "stop":
+                        switch (Command.valueOf(cmd.toUpperCase())) {
+                            case EXIT:
+                            case STOP:
                                 open = false;
                                 try {
                                     close();
@@ -123,19 +129,25 @@ public class ConvoSyncServer {
                                     System.out.println("Error closing: " + ex);
                                 }
                                 break;
-                            case "restart":
+                            case RESTART:
                                 try {
                                     restart();
                                 } catch (IOException ex) {
                                     System.out.println("Error restarting: " + ex);
                                 }
                                 break;
-                            case "kick":
+                            case KICK:
                                 int id;
                                 boolean found = false;
                                 try {
                                     id = Integer.parseInt(input.split(" ")[1]);
-                                } catch (NumberFormatException | ArrayIndexOutOfBoundsException | StringIndexOutOfBoundsException ex) {
+                                } catch (NumberFormatException ex) {
+                                    System.out.println("Invalid parameters.");
+                                    break;
+                                } catch (ArrayIndexOutOfBoundsException ex) {
+                                    System.out.println("Invalid parameters.");
+                                    break;
+                                } catch (StringIndexOutOfBoundsException ex) {
                                     System.out.println("Invalid parameters.");
                                     break;
                                 }
@@ -156,7 +168,7 @@ public class ConvoSyncServer {
                                     System.out.println("Socket with port " + id + " not found.");
                                 }
                                 break;
-                            case "list":
+                            case LIST:
                                 if (clients.isEmpty()) {
                                     System.out.println("There are currently no connected clients.");
                                 } else {
@@ -166,22 +178,25 @@ public class ConvoSyncServer {
                                     }
                                 }
                                 break;
-                            case "name":
+                            case NAME:
                                 try {
                                     name = input.split(" ")[1];
-                                } catch (NumberFormatException | ArrayIndexOutOfBoundsException ex) {
+                                } catch (NumberFormatException ex) {
+                                    System.out.println("Invalid parameters.");
+                                } catch (ArrayIndexOutOfBoundsException ex) {
                                     System.out.println("Invalid parameters.");
                                 }
                                 System.out.println("Name: " + name);
                                 break;
-                            case "help":
+                            case HELP:
                                 System.out.println("Commands:\n"
                                         + "/exit - Closes the socket and exits the program.\n"
                                         + "/stop - Same as /exit.\n"
                                         + "/restart - Closes the socket and then reopens it.\n"
                                         + "/kick <port> - Closes the socket on the specified port.\n"
                                         + "/list - Lists all connected clients.\n"
-                                        + "/name <name> - Sets your name to the given name.");
+                                        + "/name <name> - Sets your name to the given name.\n"
+                                        + "/help - Prints all commands.");
                                 break;
                             default:
                                 System.out.println("Unknown command. Enter /help for a list of commands.");
@@ -244,7 +259,7 @@ public class ConvoSyncServer {
             return;
         }
         for (Client client : clients) {
-            if (client != sender  && client.verified) {
+            if (client != sender && client.verified) {
                 client.sendMsg(s);
             }
         }
