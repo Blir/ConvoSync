@@ -3,8 +3,9 @@ package com.minepop.servegame.convosync;
 import com.earth2me.essentials.Essentials;
 import java.util.ArrayList;
 import java.util.List;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.Plugin;
 
 /**
  *
@@ -12,37 +13,40 @@ import org.bukkit.plugin.RegisteredServiceProvider;
  */
 public class AFKThread extends Thread {
 
-    private static ConvoSync plugin;
-    private static Essentials ess;
+    private ConvoSync plugin;
+    private Essentials ess;
     private List<User> users = new ArrayList<User>();
+
+    protected AFKThread(ConvoSync plugin) {
+        this.plugin = plugin;
+        Plugin prospective = plugin.getServer().getPluginManager().getPlugin("Essentials");
+        if (prospective != null && prospective instanceof Essentials) {
+            ess = (Essentials) prospective;
+            if (ess != null) {
+                plugin.isEss = true;
+            }
+        }
+    }
 
     @Override
     public void run() {
-        plugin.getLogger().info("Essentials AFK Thread started!");
-        while (plugin.connected) {
+        if (plugin.isEss) {
+            plugin.getLogger().info("Essentials AFK Thread started!");
+        }
+        while (plugin.connected && plugin.isEss) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
                 com.earth2me.essentials.User user = ess.getUser(player);
                 User csuser = getUser(user);
                 if (user.isAfk() != csuser.afk) {
                     csuser.afk = user.isAfk();
-                    plugin.out("c" + user.getDisplayName() + "§5 is no" + (user.isAfk() ? "w AFK." : " longer AFK."));
+                    plugin.out("c" + user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
                 }
             }
             try {
                 Thread.sleep(250);
             } catch (InterruptedException ex) {
-            }
-        }
-    }
-
-    protected static void enable(ConvoSync plugin) {
-        AFKThread.plugin = plugin;
-        RegisteredServiceProvider<Essentials> rsp;
-        rsp = plugin.getServer().getServicesManager().getRegistration(Essentials.class);
-        if (rsp != null) {
-            ess = rsp.getProvider();
-            if (ess != null) {
-                plugin.isEss = true;
+                plugin.isEss = false;
+                plugin.getLogger().warning("Essentials AFK Thread has crashed!");
             }
         }
     }

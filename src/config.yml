@@ -1,8 +1,16 @@
 port: 25000
-ip: 127.0.0.1
+ip: null
 password: null
+#If this many players are on the server, it will not sync chat with the other servers.
+max-players: 25
+notif:
+  #If true, player death messages will be displayed cross-server.
+  player-death: false
+  #If true, AFK notifications will be displayed cross-server.
+  afk: true
 auto-reconnect:
   after-socket-close: false
   after-socket-error: true
   after-connect-fail: true
+  #This is in milliseconds, so 30000 ms is 30 seconds.
   time-delay-ms: 30000

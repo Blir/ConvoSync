@@ -1,13 +1,26 @@
 package com.minepop.servegame.convosync;
 
-import java.io.BufferedReader;
+import blir.net.AuthenticationRequest;
+import blir.net.ChatMessage;
+import blir.net.CommandMessage;
+import blir.net.Message;
+import blir.net.PlayerMessage;
+import blir.net.PrivateMessage;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -25,6 +38,8 @@ public class ConvoSyncServer {
     private boolean open = true;
     private final ArrayList<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
+    private final Map<String, String> userMap = new HashMap<String, String>();
+    private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
 
     /**
      * @param args the command line arguments
@@ -33,11 +48,27 @@ public class ConvoSyncServer {
         new ConvoSyncServer().run(args);
     }
 
-    public void run(String[] args) throws IOException {
-
-        System.out.println(this);
+    public void run(String[] startupArgs) throws IOException {
+        LOGGER.setLevel(Level.CONFIG);
+        Handler handler = new ConsoleHandler();
+        Formatter formatter = new CustomFormatter();
+        handler.setFormatter(formatter);
+        handler.setLevel(Level.CONFIG);
+        LOGGER.addHandler(handler);
+        handler = new FileHandler("CS-Server.log", true);
+        handler.setFormatter(formatter);
+        handler.setLevel(Level.CONFIG);
+        LOGGER.addHandler(handler);
+        LOGGER.setUseParentHandlers(false);
+        LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
+                .format(java.util.Calendar.getInstance().getTime()));
+        LOGGER.log(Level.INFO, toString());
+        LOGGER.log(Level.CONFIG, "Java Version: {0}", System.getProperty("java.version"));
+        LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
+        LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
+        LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
         in = new Scanner(System.in);
-        for (String arg : args) {
+        for (String arg : startupArgs) {
             try {
                 if (arg.startsWith("Port:")) {
                     port = Integer.parseInt(arg.split(":")[1]);
@@ -49,9 +80,9 @@ public class ConvoSyncServer {
                     pluginPassword = arg.split(":")[1];
                 }
             } catch (NumberFormatException ex) {
-                System.out.println("Invalid argument: " + arg);
+                LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             } catch (ArrayIndexOutOfBoundsException ex) {
-                System.out.println("Invalid argument: " + arg);
+                LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             }
         }
         while (port == 0) {
@@ -59,11 +90,11 @@ public class ConvoSyncServer {
             try {
                 port = Integer.parseInt(in.nextLine());
                 if (port <= 0) {
-                    System.out.println("You did not enter a positive number.");
+                    System.out.println("You did not enter a valid number.");
                     port = 0;
                 }
             } catch (NumberFormatException ex) {
-                System.out.println("You did not enter an integer.");
+                System.out.println("You did not enter a valid number.");
             }
         }
         while (pluginPassword == null || pluginPassword.equals("")) {
@@ -71,11 +102,11 @@ public class ConvoSyncServer {
             pluginPassword = in.nextLine();
         }
         while (applicationPassword == null || applicationPassword.equals("")) {
-            System.out.print("Enter a password that the ConcoSync application clients will use to connect: ");
+            System.out.print("Enter a password that the ConvoSync application clients will use to connect: ");
             applicationPassword = in.nextLine();
         }
         Client.setServer(this);
-        connect();
+        open();
         new Thread() {
             @Override
             public void run() {
@@ -87,18 +118,10 @@ public class ConvoSyncServer {
                         client = new Client(clientSocket);
                         clients.add(client);
                         client.start();
-                    } catch (IOException ex) {
-                        System.out.println(ex);
-                        open = false;
-                        client = null;
-                    }
-                    if (client != null) {
-                        System.out.println("Accepted a connection: " + client);
-                    }
-                    if (open) {
-                        try {
-                            Thread.sleep(250);
-                        } catch (InterruptedException ex) {
+                        LOGGER.log(Level.INFO, "Accepted a connection: {0}", client);
+                    } catch (Exception ex) {
+                        if (!socket.isClosed()) {
+                            LOGGER.log(Level.SEVERE, "Error accepting a connection!", ex);
                         }
                     }
                 }
@@ -107,164 +130,85 @@ public class ConvoSyncServer {
 
         String input;
         try {
-            while (open) {
+            while (alive() || open) {
                 input = in.nextLine();
                 if (input != null && input.length() > 0) {
                     if (input.charAt(0) == '/') {
-                        String cmd;
-                        if (input.contains(" ")) {
-                            cmd = input.substring(1, input.indexOf(" "));
-                        } else {
-                            cmd = input.substring(1);
+                        int delim = input.indexOf(" ");
+                        Command cmd;
+                        try {
+                            cmd = Command.valueOf((delim > 0 ? input.substring(0, delim) : input).substring(1).toUpperCase());
+                        } catch (IllegalArgumentException ex) {
+                            cmd = Command.HELP;
                         }
-                        switch (Command.valueOf(cmd.toUpperCase())) {
-                            case EXIT:
-                            case STOP:
-                                open = false;
-                                try {
-                                    close();
-                                    System.out.println();
-                                    System.exit(0);
-                                } catch (IOException ex) {
-                                    System.out.println("Error closing: " + ex);
-                                }
-                                break;
-                            case RESTART:
-                                try {
-                                    restart();
-                                } catch (IOException ex) {
-                                    System.out.println("Error restarting: " + ex);
-                                }
-                                break;
-                            case KICK:
-                                int id;
-                                boolean found = false;
-                                try {
-                                    id = Integer.parseInt(input.split(" ")[1]);
-                                } catch (NumberFormatException ex) {
-                                    System.out.println("Invalid parameters.");
-                                    break;
-                                } catch (ArrayIndexOutOfBoundsException ex) {
-                                    System.out.println("Invalid parameters.");
-                                    break;
-                                } catch (StringIndexOutOfBoundsException ex) {
-                                    System.out.println("Invalid parameters.");
-                                    break;
-                                }
-                                for (Client client : clients) {
-                                    if (client.socket.getPort() == id) {
-                                        found = true;
-                                        System.out.println("Closing " + client);
-                                        try {
-                                            client.close();
-                                            System.out.println("Client closed.");
-                                        } catch (IOException ex) {
-                                            System.out.println("Error closing socket: " + ex);
-                                        }
-                                        break;
-                                    }
-                                }
-                                if (!found) {
-                                    System.out.println("Socket with port " + id + " not found.");
-                                }
-                                break;
-                            case LIST:
-                                if (clients.isEmpty()) {
-                                    System.out.println("There are currently no connected clients.");
-                                } else {
-                                    System.out.println("All connected clients:");
-                                    for (Client client : clients) {
-                                        System.out.println(client);
-                                    }
-                                }
-                                break;
-                            case NAME:
-                                try {
-                                    name = input.split(" ")[1];
-                                } catch (NumberFormatException ex) {
-                                    System.out.println("Invalid parameters.");
-                                } catch (ArrayIndexOutOfBoundsException ex) {
-                                    System.out.println("Invalid parameters.");
-                                }
-                                System.out.println("Name: " + name);
-                                break;
-                            case HELP:
-                                System.out.println("Commands:\n"
-                                        + "/exit - Closes the socket and exits the program.\n"
-                                        + "/stop - Same as /exit.\n"
-                                        + "/restart - Closes the socket and then reopens it.\n"
-                                        + "/kick <port> - Closes the socket on the specified port.\n"
-                                        + "/list - Lists all connected clients.\n"
-                                        + "/name <name> - Sets your name to the given name.\n"
-                                        + "/help - Prints all commands.");
-                                break;
-                            default:
-                                System.out.println("Unknown command. Enter /help for a list of commands.");
-                                break;
-                        }
+                        String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
+                        onCommand(cmd, args);
                     } else {
-                        chat("c<§5" + name + "§f> " + input, null);
+                        out("c<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                     }
                 }
-                Thread.sleep(50);
             }
         } catch (Exception ex) {
-            System.out.println("Fatal error! Closing server.");
-            ex.printStackTrace();
-            try {
-                close();
-                System.out.println();
-                System.exit(-1);
-            } catch (IOException ex2) {
-                System.err.println("Error closing server: " + ex2);
+            LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
+        }
+    }
+
+    private boolean alive() {
+        for (Client client : clients) {
+            if (client.isAlive()) {
+                return true;
             }
         }
+        return false;
     }
 
     private void restart() throws IOException {
-        close();
-        connect();
+        close(false);
+        open();
     }
 
-    private void connect() throws IOException {
+    private void open() throws IOException {
         socket = new ServerSocket(port);
-        System.out.println(socket);
-        System.out.println();
+        LOGGER.log(Level.INFO, socket.toString());
     }
 
-    private void close() throws IOException {
-        int[] clientPorts = new int[clients.size()];
-        for (int idx = 0; idx < clients.size(); idx++) {
-            clientPorts[idx] = clients.get(idx).socket.getPort();
-        }
-        Client client;
-        for (int clientPort : clientPorts) {
-            client = getClient(clientPort);
-            client.close();
-        }
-        socket.close();
-    }
-
-    private Client getClient(int port) {
-        for (Client client : clients) {
-            if (client.socket.getPort() == port) {
-                return client;
+    private void close(boolean force) throws IOException {
+        LOGGER.log(Level.INFO, "Closing {0}", this);
+        try {
+            for (Client client : clients) {
+                client.close();
+            }
+        } finally {
+            clients.clear();
+            try {
+                socket.close();
+            } finally {
+                if (force) {
+                    System.exit(-1);
+                }
             }
         }
-        return null;
     }
 
-    private void chat(String s, Client sender) {
+    private void out(String msg, Client sender) {
         if (sender != null && !sender.verified) {
             return;
         }
         for (Client client : clients) {
             if (client != sender && client.verified) {
-                client.sendMsg(s);
+                client.sendMsg(msg);
             }
         }
-        if (sender != null) {
-            System.out.println("[" + sender.socket.getPort() + "]" + s.substring(1).replaceAll("Â§[a-zA-Z0-9]", "").replaceAll("§[a-zA-Z0-9]", ""));
+        LOGGER.log(Level.INFO, "[{0}] {1} ",
+                new Object[]{sender == null ? "N/A" : sender.socket.getPort(), format(msg.substring(1))});
+    }
+
+    private static void debug(String input) {
+        LOGGER.log(Level.FINEST, "Debug info for message: {0}", input);
+        for (int idx = 0; idx < input.length(); idx++) {
+            LOGGER.log(Level.FINEST, "Character {0} : {1} : {2}",
+                    new Object[]{idx, input.charAt(idx),
+                Integer.toHexString(input.charAt(idx) | 0x10000).substring(1)});
         }
     }
 
@@ -273,6 +217,55 @@ public class ConvoSyncServer {
             if (client.type == type && client.verified) {
                 client.sendMsg(notification);
             }
+        }
+    }
+
+    private void out(PrivateMessage msg, Client sender) {
+        if (sender != null && !sender.verified) {
+            return;
+        }
+        String server = userMap.get(msg.recip);
+        if (server == null && sender != null) {
+            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.recip + COLOR_CHAR + "c\"not found.", msg.sender));
+            return;
+        }
+        for (Client client : clients) {
+            if (client.type == Client.ClientType.PLUGIN && client.localname.equals(server)) {
+                client.sendMsg(msg);
+                LOGGER.log(Level.FINER, "{0} sent!", msg);
+            }
+        }
+    }
+
+    private void out(PlayerMessage msg, Client sender) {
+        if (sender != null && !sender.verified) {
+            return;
+        }
+        for (Client client : clients) {
+            if (client.type == Client.ClientType.PLUGIN) {
+                client.sendMsg(msg);
+                LOGGER.log(Level.FINER, "{0} sent!", msg);
+            }
+        }
+    }
+
+    private void out(CommandMessage msg, Client sender) {
+        if (sender != null && !sender.verified) {
+            return;
+        }
+        for (Client client : clients) {
+            if (client.type == Client.ClientType.PLUGIN && client.name.equalsIgnoreCase(msg.target)) {
+                client.sendMsg(msg);
+                if (sender != null) {
+                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg + " sent!", msg.sender));
+                }
+                LOGGER.log(Level.FINER, "{0} sent!", msg);
+                return;
+            }
+        }
+        if (sender != null) {
+            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cServer " + COLOR_CHAR
+                    + "9" + msg.target + COLOR_CHAR + "c not found.", msg.sender));
         }
     }
 
@@ -285,55 +278,48 @@ public class ConvoSyncServer {
         private static ConvoSyncServer server;
         private Socket socket;
         private ClientType type;
-        private PrintWriter out;
-        private BufferedReader in;
+        private ObjectOutputStream out;
+        private ObjectInputStream in;
         private boolean alive = true, verified = false;
         private String name, localname;
 
         private Client(Socket socket) throws IOException {
             super();
             this.socket = socket;
-            out = new PrintWriter(socket.getOutputStream());
-            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            out = new ObjectOutputStream(socket.getOutputStream());
+            in = new ObjectInputStream(socket.getInputStream());
         }
 
         @Override
         public void run() {
+            Object input;
+            String msg;
             while (alive) {
                 try {
-                    String input = in.readLine();
-                    if (input != null && input.length() > 0) {
-                        switch (input.charAt(0)) {
-                            case 'n':
-                                name = input.substring(1).replaceAll("\\?", "");
-                                localname = name.replaceAll("Â§[a-zA-Z0-9]", "").replaceAll("§[a-zA-Z0-9]", "");
-                                break;
-                            case 'c':
-                                server.chat("c[" + name + "]" + input.substring(1), this);
-                                break;
-                            case 't':
-                                type = ClientType.valueOf(input.substring(1).toUpperCase());
-                                if (type == ClientType.APPLICATION) {
-                                    server.notify("l", ClientType.PLUGIN);
-                                }
-                                break;
-                            case 'l':
-                            case 'j':
-                            case 'q':
-                            case 'r':
-                                server.notify(input, ClientType.APPLICATION);
-                                break;
-                            case 'd':
-                                alive = false;
-                                server.clients.remove(this);
-                                break;
-                            case 'v':
-                                if (type == null) {
-                                    break;
-                                }
+                    input = in.readObject();
+                    if (!(input instanceof Message)) {
+                        LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
+                    }
+                    if (input != null && input instanceof Message) {
+                        if (input instanceof PrivateMessage) {
+                            server.out((PrivateMessage) input, this);
+                            continue;
+                        }
+                        if (input instanceof CommandMessage) {
+                            server.out((CommandMessage) input, this);
+                            continue;
+                        }
+                        if (input instanceof AuthenticationRequest) {
+                            AuthenticationRequest authReq = (AuthenticationRequest) input;
+                            name = authReq.name;
+                            type = ClientType.valueOf(authReq.type.toUpperCase());
+                            if (type == ClientType.APPLICATION) {
+                                server.notify("l", ClientType.PLUGIN);
+                            }
+                            if (type != null) {
                                 switch (type) {
                                     case PLUGIN:
-                                        if (input.substring(1).equals(server.pluginPassword)) {
+                                        if (authReq.password.equals(server.pluginPassword)) {
                                             verified = true;
                                             sendMsg("v");
                                         } else {
@@ -341,7 +327,7 @@ public class ConvoSyncServer {
                                         }
                                         break;
                                     case APPLICATION:
-                                        if (input.substring(1).equals(server.applicationPassword)) {
+                                        if (authReq.password.equals(server.applicationPassword)) {
                                             verified = true;
                                             sendMsg("v");
                                         } else {
@@ -349,39 +335,81 @@ public class ConvoSyncServer {
                                         }
                                         break;
                                 }
+                            }
+                            continue;
+                        }
+                        if (input instanceof PlayerMessage) {
+                            server.out((PlayerMessage) input, this);
+                            continue;
+                        }
+                        msg = ((ChatMessage) input).msg;
+                        debug(msg);
+                        switch (msg.charAt(0)) {
+                            case 'c':
+                                server.out("c[" + name + "]" + msg.substring(1), this);
+                                break;
+                            case 'l':
+                            case 'r':
+                                server.notify(msg, ClientType.APPLICATION);
+                                break;
+                            case 'j':
+                                server.userMap.put(msg.substring(1), localname);
+                                server.notify(msg, ClientType.APPLICATION);
+                                break;
+                            case 'q':
+                                server.userMap.remove(msg.substring(1));
+                                server.notify(msg, ClientType.APPLICATION);
+                                break;
+                            case 'd':
+                                alive = false;
+                                server.clients.remove(this);
                                 break;
                             default:
-                                System.out.println("Unidentified message from " + this + ": " + input);
+                                LOGGER.log(Level.WARNING, "Unidentified chat message from {0}: {1}",
+                                        new Object[]{this, input});
                                 break;
                         }
                     }
                 } catch (IOException ex) {
-                    if (socket.isClosed()) {
-                    } else {
+                    alive = false;
+                    server.clients.remove(this);
+                    if (!socket.isClosed()) {
                         try {
                             socket.close();
                         } catch (IOException ex2) {
-                            System.out.println("Error disconnecting client " + this + ": " + ex2);
+                            LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
                         }
                     }
-                    server.clients.remove(this);
+                } catch (ClassNotFoundException ex) {
                     alive = false;
-                }
-                try {
-                    Thread.sleep(25);
-                } catch (InterruptedException ex) {
+                    server.clients.remove(this);
+                    LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
+                    try {
+                        socket.close();
+                    } catch (IOException ex2) {
+                        LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
+                    }
                 }
             }
         }
 
         private void sendMsg(String s) {
-            out.println(s);
-            out.flush();
+            sendMsg(new ChatMessage(s));
+        }
+
+        private void sendMsg(Object obj) {
+            try {
+                out.writeObject(obj);
+                out.flush();
+            } catch (IOException ex) {
+                if (!socket.isClosed()) {
+                    LOGGER.log(Level.SEVERE, "Could not write object " + obj, ex);
+                }
+            }
         }
 
         private void close() throws IOException {
             alive = false;
-            server.clients.remove(this);
             sendMsg("d");
             socket.close();
         }
@@ -398,6 +426,87 @@ public class ConvoSyncServer {
 
     @Override
     public String toString() {
-        return "ConvoSyncServer Beta 1.1";
+        return "ConvoSyncServer Beta 1.2";
+    }
+
+    private void onCommand(Command cmd, String[] args) {
+        LOGGER.log(Level.INFO, "Executing command {0}", cmd);
+        switch (cmd) {
+            case EXIT:
+            case STOP:
+                open = false;
+                try {
+                    close(args.length > 0 && args[0].equalsIgnoreCase("force"));
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, "Error closing!", ex);
+                }
+                break;
+            case RESTART:
+                try {
+                    restart();
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, "Error restarting!", ex);
+                }
+                break;
+            case KICK:
+                if (args.length < 1) {
+                    LOGGER.log(Level.INFO, "Usage: /kick <port>");
+                    break;
+                }
+                int id;
+                try {
+                    id = Integer.parseInt(args[0]);
+                } catch (NumberFormatException ex) {
+                    LOGGER.log(Level.INFO, "You did not enter a valid number.");
+                    break;
+                }
+                boolean found = false;
+                for (Client client : clients) {
+                    if (client.socket.getPort() == id) {
+                        found = true;
+                        LOGGER.log(Level.INFO, "Closing {0}", client);
+                        try {
+                            client.close();
+                            LOGGER.log(Level.INFO, "Client closed.");
+                            out("c[" + client.name + "]" + COLOR_CHAR + "c has been kicked.", client);
+                        } catch (IOException ex) {
+                            LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
+                        }
+                        break;
+                    }
+                }
+                if (!found) {
+                    LOGGER.log(Level.INFO, "Socket with port {0} not found.", id);
+                }
+                break;
+            case LIST:
+                if (clients.isEmpty()) {
+                    LOGGER.log(Level.INFO, "There are currently no connected clients.");
+                } else {
+                    LOGGER.log(Level.INFO, "All connected clients:");
+                    for (Client client : clients) {
+                        LOGGER.log(Level.INFO, "{0}", client);
+                    }
+                }
+                break;
+            case NAME:
+                LOGGER.log(Level.INFO, "Name: {0}", (name = args.length > 0 ? args[0] : name));
+                break;
+            case HELP:
+                LOGGER.log(Level.INFO, "Commands:\n"
+                        + "/exit [force] - Closes the socket and exits the program.\n"
+                        + "/stop [force] - Same as /exit.\n"
+                        + "/restart - Closes the socket and then reopens it.\n"
+                        + "/kick <port> - Closes the socket on the specified port.\n"
+                        + "/list - Lists all connected clients.\n"
+                        + "/name [name] - Sets your name to the given name.\n"
+                        + "/help - Prints all commands.");
+                break;
+        }
+    }
+    private static final char COLOR_CHAR = '\u00A7';
+
+    private static String format(String s) {
+        return s.replaceAll(COLOR_CHAR + "\\w", "");
     }
 }
