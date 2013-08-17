@@ -1,26 +1,17 @@
 package com.minepop.servegame.convosync;
 
-import blir.net.AuthenticationRequest;
-import blir.net.ChatMessage;
-import blir.net.CommandMessage;
-import blir.net.Message;
-import blir.net.PlayerMessage;
-import blir.net.PrivateMessage;
+import com.minepop.servegame.convosync.net.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.FileHandler;
-import java.util.logging.Formatter;
-import java.util.logging.Handler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.logging.*;
 
 /**
  *
@@ -30,15 +21,15 @@ public class ConvoSyncServer {
 
     private enum Command {
 
-        EXIT, STOP, RESTART, KICK, LIST, NAME, HELP
+        EXIT, STOP, RESTART, KICK, LIST, USERS, NAME, HELP, DEBUG
     }
     private int port;
     private ServerSocket socket;
     private Scanner in;
-    private boolean open = true;
-    private final ArrayList<Client> clients = new ArrayList<Client>();
+    private boolean open = true, debug = false;
+    private ArrayList<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
-    private final Map<String, String> userMap = new HashMap<String, String>();
+    private Map<String, String> userMap = new HashMap<String, String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
 
     /**
@@ -49,7 +40,6 @@ public class ConvoSyncServer {
     }
 
     public void run(String[] startupArgs) throws IOException {
-        LOGGER.setLevel(Level.CONFIG);
         Handler handler = new ConsoleHandler();
         Formatter formatter = new CustomFormatter();
         handler.setFormatter(formatter);
@@ -60,6 +50,7 @@ public class ConvoSyncServer {
         handler.setLevel(Level.CONFIG);
         LOGGER.addHandler(handler);
         LOGGER.setUseParentHandlers(false);
+        LOGGER.setLevel(Level.CONFIG);
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
                 .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
@@ -105,8 +96,8 @@ public class ConvoSyncServer {
             System.out.print("Enter a password that the ConvoSync application clients will use to connect: ");
             applicationPassword = in.nextLine();
         }
-        Client.setServer(this);
         open();
+        final ConvoSyncServer server = this;
         new Thread() {
             @Override
             public void run() {
@@ -117,6 +108,7 @@ public class ConvoSyncServer {
                         clientSocket = socket.accept();
                         client = new Client(clientSocket);
                         clients.add(client);
+                        client.setServer(server);
                         client.start();
                         LOGGER.log(Level.INFO, "Accepted a connection: {0}", client);
                     } catch (Exception ex) {
@@ -129,8 +121,8 @@ public class ConvoSyncServer {
         }.start();
 
         String input;
-        try {
-            while (alive() || open) {
+        while (open || alive()) {
+            try {
                 input = in.nextLine();
                 if (input != null && input.length() > 0) {
                     if (input.charAt(0) == '/') {
@@ -144,12 +136,12 @@ public class ConvoSyncServer {
                         String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
                         onCommand(cmd, args);
                     } else {
-                        out("c<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
+                        out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                     }
                 }
+            } catch (Exception ex) {
+                LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
             }
-        } catch (Exception ex) {
-            LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
         }
     }
 
@@ -179,6 +171,7 @@ public class ConvoSyncServer {
                 client.close();
             }
         } finally {
+            userMap.clear();
             clients.clear();
             try {
                 socket.close();
@@ -191,16 +184,20 @@ public class ConvoSyncServer {
     }
 
     private void out(String msg, Client sender) {
-        if (sender != null && !sender.verified) {
+        if (sender != null && !sender.auth) {
             return;
         }
         for (Client client : clients) {
-            if (client != sender && client.verified) {
-                client.sendMsg(msg);
+            if (client != sender && client.auth) {
+                if (sender == null && client.enabled) {
+                    client.sendMsg(new ChatMessage(msg, true));
+                } else {
+                    client.sendMsg(msg, false);
+                }
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "N/A" : sender.socket.getPort(), format(msg.substring(1))});
+                new Object[]{sender == null ? "NA" : sender.socket.getPort(), format(msg)});
     }
 
     private static void debug(String input) {
@@ -212,60 +209,57 @@ public class ConvoSyncServer {
         }
     }
 
-    private void notify(String notification, Client.ClientType type) {
+    private void notify(PlayerListMessage notification, Client.ClientType type) {
         for (Client client : clients) {
-            if (client.type == type && client.verified) {
+            if (client.type == type && client.auth) {
                 client.sendMsg(notification);
             }
         }
     }
 
     private void out(PrivateMessage msg, Client sender) {
-        if (sender != null && !sender.verified) {
+        if (sender != null && !sender.auth) {
             return;
         }
-        String server = userMap.get(msg.recip);
+        String server = userMap.get(msg.RECIPIENT);
         if (server == null && sender != null) {
-            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.recip + COLOR_CHAR + "c\"not found.", msg.sender));
+            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\"not found.", msg.SENDER));
             return;
         }
         for (Client client : clients) {
             if (client.type == Client.ClientType.PLUGIN && client.localname.equals(server)) {
                 client.sendMsg(msg);
-                LOGGER.log(Level.FINER, "{0} sent!", msg);
             }
         }
     }
 
     private void out(PlayerMessage msg, Client sender) {
-        if (sender != null && !sender.verified) {
+        if (sender != null && !sender.auth) {
             return;
         }
         for (Client client : clients) {
             if (client.type == Client.ClientType.PLUGIN) {
                 client.sendMsg(msg);
-                LOGGER.log(Level.FINER, "{0} sent!", msg);
             }
         }
     }
 
     private void out(CommandMessage msg, Client sender) {
-        if (sender != null && !sender.verified) {
+        if (sender != null && !sender.auth) {
             return;
         }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN && client.name.equalsIgnoreCase(msg.target)) {
+            if (client.type == Client.ClientType.PLUGIN && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg);
                 if (sender != null) {
-                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg + " sent!", msg.sender));
+                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg + " sent!", msg.SENDER));
                 }
-                LOGGER.log(Level.FINER, "{0} sent!", msg);
                 return;
             }
         }
         if (sender != null) {
             sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cServer " + COLOR_CHAR
-                    + "9" + msg.target + COLOR_CHAR + "c not found.", msg.sender));
+                    + "9" + msg.TARGET + COLOR_CHAR + "c not found.", msg.SENDER));
         }
     }
 
@@ -275,12 +269,12 @@ public class ConvoSyncServer {
 
             PLUGIN, APPLICATION
         }
-        private static ConvoSyncServer server;
+        private ConvoSyncServer server;
         private Socket socket;
         private ClientType type;
         private ObjectOutputStream out;
         private ObjectInputStream in;
-        private boolean alive = true, verified = false;
+        private boolean alive = true, auth = false, enabled = true;
         private String name, localname;
 
         private Client(Socket socket) throws IOException {
@@ -293,86 +287,89 @@ public class ConvoSyncServer {
         @Override
         public void run() {
             Object input;
-            String msg;
             while (alive) {
                 try {
                     input = in.readObject();
+                    LOGGER.log(Level.FINER, "Input: {0}", input);
                     if (!(input instanceof Message)) {
                         LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
+                        continue;
                     }
-                    if (input != null && input instanceof Message) {
-                        if (input instanceof PrivateMessage) {
-                            server.out((PrivateMessage) input, this);
-                            continue;
+                    if (input instanceof PrivateMessage) {
+                        server.out((PrivateMessage) input, this);
+                        continue;
+                    }
+                    if (input instanceof PlayerMessage) {
+                        server.out((PlayerMessage) input, this);
+                        continue;
+                    }
+                    if (input instanceof ChatMessage) {
+                        if (enabled) {
+                            server.out("[" + name + "] " + ((ChatMessage) input).MSG, this);
                         }
-                        if (input instanceof CommandMessage) {
-                            server.out((CommandMessage) input, this);
-                            continue;
-                        }
-                        if (input instanceof AuthenticationRequest) {
-                            AuthenticationRequest authReq = (AuthenticationRequest) input;
-                            name = authReq.name;
-                            type = ClientType.valueOf(authReq.type.toUpperCase());
-                            if (type == ClientType.APPLICATION) {
-                                server.notify("l", ClientType.PLUGIN);
+                        continue;
+                    }
+                    if (input instanceof CommandMessage) {
+                        server.out((CommandMessage) input, this);
+                        continue;
+                    }
+                    if (input instanceof PlayerListMessage) {
+                        PlayerListMessage msg = (PlayerListMessage) input;
+                        server.notify(msg, ClientType.APPLICATION);
+                        for (String element : msg.LIST) {
+                            if (msg.JOIN) {
+                                server.userMap.put(element, localname);
+                            } else {
+                                server.userMap.remove(element);
                             }
-                            if (type != null) {
-                                switch (type) {
-                                    case PLUGIN:
-                                        if (authReq.password.equals(server.pluginPassword)) {
-                                            verified = true;
-                                            sendMsg("v");
-                                        } else {
-                                            sendMsg("w");
-                                        }
-                                        break;
-                                    case APPLICATION:
-                                        if (authReq.password.equals(server.applicationPassword)) {
-                                            verified = true;
-                                            sendMsg("v");
-                                        } else {
-                                            sendMsg("w");
-                                        }
-                                        break;
-                                }
-                            }
-                            continue;
                         }
-                        if (input instanceof PlayerMessage) {
-                            server.out((PlayerMessage) input, this);
-                            continue;
+                        continue;
+                    }
+                    if (input instanceof PluginAuthenticationRequest) {
+                        PluginAuthenticationRequest authReq = (PluginAuthenticationRequest) input;
+                        name = authReq.NAME;
+                        localname = format(name);
+                        type = ClientType.PLUGIN;
+                        auth = authReq.PASSWORD.equals(server.pluginPassword);
+                        sendMsg(new AuthenticationRequestResponse(auth));
+                        server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
+                        for (String element : authReq.PLAYERS) {
+                            server.userMap.put(element, localname);
                         }
-                        msg = ((ChatMessage) input).msg;
-                        debug(msg);
-                        switch (msg.charAt(0)) {
-                            case 'c':
-                                server.out("c[" + name + "]" + msg.substring(1), this);
-                                break;
-                            case 'l':
-                            case 'r':
-                                server.notify(msg, ClientType.APPLICATION);
-                                break;
-                            case 'j':
-                                server.userMap.put(msg.substring(1), localname);
-                                server.notify(msg, ClientType.APPLICATION);
-                                break;
-                            case 'q':
-                                server.userMap.remove(msg.substring(1));
-                                server.notify(msg, ClientType.APPLICATION);
-                                break;
-                            case 'd':
-                                alive = false;
-                                server.clients.remove(this);
-                                break;
-                            default:
-                                LOGGER.log(Level.WARNING, "Unidentified chat message from {0}: {1}",
-                                        new Object[]{this, input});
-                                break;
+                        server.out(name + " has connected.", this);
+                        continue;
+                    }
+                    if (input instanceof ApplicationAuthenticationRequest) {
+                        ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
+                        name = authReq.NAME;
+                        type = ClientType.APPLICATION;
+                        auth = authReq.PASSWORD.equals(server.applicationPassword);
+                        sendMsg(new AuthenticationRequestResponse(auth));
+                        sendMsg(new PlayerListMessage(server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));
+                        server.out(name + " has joined.", this);
+                        continue;
+                    }
+                    if (input instanceof SetEnabledProperty) {
+                        enabled = ((SetEnabledProperty) input).ENABLED;
+                        server.out(name + " has " + (enabled ? "enabled" : "disabled")
+                                + " cross-server chat due to " + (enabled ? "reduced" : "high")
+                                + " player count.", this);
+                        if (!enabled) {
+                            server.out("This doesn't affect cross-server private messages or commands.", this);
                         }
+                        continue;
+                    }
+                    if (input instanceof DisconnectMessage) {
+                        server.out(name + " has disconnected.", this);
+                        server.userMap.values().removeAll(Collections.singleton(localname));
+                        alive = false;
+                        server.clients.remove(this);
                     }
                 } catch (IOException ex) {
                     alive = false;
-                    server.clients.remove(this);
+                    if (server.open) {
+                        server.clients.remove(this);
+                    }
                     if (!socket.isClosed()) {
                         try {
                             socket.close();
@@ -382,7 +379,9 @@ public class ConvoSyncServer {
                     }
                 } catch (ClassNotFoundException ex) {
                     alive = false;
-                    server.clients.remove(this);
+                    if (server.open) {
+                        server.clients.remove(this);
+                    }
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
                     try {
                         socket.close();
@@ -393,14 +392,17 @@ public class ConvoSyncServer {
             }
         }
 
-        private void sendMsg(String s) {
-            sendMsg(new ChatMessage(s));
+        private void sendMsg(String s, boolean override) {
+            if (enabled || override) {
+                sendMsg(new ChatMessage(s, false));
+            }
         }
 
         private void sendMsg(Object obj) {
             try {
                 out.writeObject(obj);
                 out.flush();
+                LOGGER.log(Level.FINER, "{0} sent!", obj);
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
                     LOGGER.log(Level.SEVERE, "Could not write object " + obj, ex);
@@ -410,7 +412,7 @@ public class ConvoSyncServer {
 
         private void close() throws IOException {
             alive = false;
-            sendMsg("d");
+            sendMsg(new DisconnectMessage());
             socket.close();
         }
 
@@ -419,14 +421,14 @@ public class ConvoSyncServer {
             return "Client[" + localname + "," + socket + "," + super.toString() + "]";
         }
 
-        private static void setServer(ConvoSyncServer server) {
-            Client.server = server;
+        private void setServer(ConvoSyncServer server) {
+            this.server = server;
         }
     }
 
     @Override
     public String toString() {
-        return "ConvoSyncServer Beta 1.2";
+        return "ConvoSyncServer 1.0.0";
     }
 
     private void onCommand(Command cmd, String[] args) {
@@ -468,7 +470,7 @@ public class ConvoSyncServer {
                         try {
                             client.close();
                             LOGGER.log(Level.INFO, "Client closed.");
-                            out("c[" + client.name + "]" + COLOR_CHAR + "c has been kicked.", client);
+                            out(client.name + " has been kicked.", client);
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
                         }
@@ -489,6 +491,15 @@ public class ConvoSyncServer {
                     }
                 }
                 break;
+            case USERS:
+                if (userMap.isEmpty()) {
+                    LOGGER.log(Level.INFO, "No known online users.");
+                } else {
+                    for (String key : userMap.keySet()) {
+                        LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
+                    }
+                }
+                break;
             case NAME:
                 LOGGER.log(Level.INFO, "Name: {0}", (name = args.length > 0 ? args[0] : name));
                 break;
@@ -499,12 +510,25 @@ public class ConvoSyncServer {
                         + "/restart - Closes the socket and then reopens it.\n"
                         + "/kick <port> - Closes the socket on the specified port.\n"
                         + "/list - Lists all connected clients.\n"
+                        + "/users - Lists all known online users.\n"
                         + "/name [name] - Sets your name to the given name.\n"
-                        + "/help - Prints all commands.");
+                        + "/help - Prints all commands.\n"
+                        + "/debug - Toggles debug mode.");
+                break;
+            case DEBUG:
+                LOGGER.log(Level.INFO, "Debug mode {0}.", (debug = !debug) ? "enabled" : "disabled");
+                for (Handler handler : LOGGER.getHandlers()) {
+                    if (debug) {
+                        handler.setLevel(Level.FINEST);
+                    } else {
+                        handler.setLevel(Level.CONFIG);
+                    }
+                }
+                LOGGER.setLevel(debug ? Level.FINEST : Level.CONFIG);
                 break;
         }
     }
-    private static final char COLOR_CHAR = '\u00A7';
+    protected static final char COLOR_CHAR = '\u00A7';
 
     private static String format(String s) {
         return s.replaceAll(COLOR_CHAR + "\\w", "");

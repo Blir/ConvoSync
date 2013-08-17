@@ -39,7 +39,7 @@ public class AFKThread extends Thread {
                 User csuser = getUser(user);
                 if (user.isAfk() != csuser.afk) {
                     csuser.afk = user.isAfk();
-                    plugin.out("c" + user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
+                    plugin.out(user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
                 }
             }
             try {

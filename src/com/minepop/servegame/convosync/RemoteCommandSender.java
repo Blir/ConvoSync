@@ -7,7 +7,6 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
-import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  *
@@ -15,21 +14,21 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public class RemoteCommandSender implements CommandSender {
 
-    private final ConvoSync plugin;
-    private final String name;
+    private final ConvoSync PLUGIN;
+    private final String NAME;
 
-    public RemoteCommandSender(final String name, final ConvoSync plugin) {
-        this.name = name;
-        this.plugin = plugin;
+    public RemoteCommandSender(String name, ConvoSync plugin) {
+        this.NAME = name;
+        this.PLUGIN = plugin;
     }
 
     @Override
     public void sendMessage(String msg) {
-        plugin.pm(msg, name);
+        PLUGIN.out(msg, NAME);
     }
 
     @Override
-    public void sendMessage(String[] msgs) {
+    public void sendMessage(String... msgs) {
         for (String msg : msgs) {
             sendMessage(msg);
         }
@@ -37,12 +36,12 @@ public class RemoteCommandSender implements CommandSender {
 
     @Override
     public Server getServer() {
-        return plugin.getServer();
+        return PLUGIN.getServer();
     }
 
     @Override
     public String getName() {
-        return name;
+        return NAME;
     }
 
     @Override
@@ -67,27 +66,27 @@ public class RemoteCommandSender implements CommandSender {
 
     @Override
     public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln) {
-        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
     @Override
     public PermissionAttachment addAttachment(Plugin plugin) {
-        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
     @Override
     public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln, int i) {
-        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
     @Override
     public PermissionAttachment addAttachment(Plugin plugin, int i) {
-        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
     @Override
     public void removeAttachment(PermissionAttachment pa) {
-        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
     @Override
@@ -96,7 +95,7 @@ public class RemoteCommandSender implements CommandSender {
 
     @Override
     public Set<PermissionAttachmentInfo> getEffectivePermissions() {
-        throw new UnsupportedOperationException("This CommandSender has no permissions."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender has no permissions.");
     }
 
     @Override
@@ -106,6 +105,6 @@ public class RemoteCommandSender implements CommandSender {
 
     @Override
     public void setOp(boolean bln) {
-        throw new UnsupportedOperationException("This CommandSender must be OP."); //To change body of generated methods, choose Tools | Templates.
+        throw new UnsupportedOperationException("This CommandSender must be OP.");
     }
 }

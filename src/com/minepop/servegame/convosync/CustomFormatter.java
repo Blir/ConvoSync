@@ -2,7 +2,6 @@ package com.minepop.servegame.convosync;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.Formatter;
@@ -14,11 +13,11 @@ import java.util.logging.LogRecord;
  */
 public class CustomFormatter extends Formatter {
 
-    private final Calendar CALENDAR;
+    private final Calendar CAL;
     private final String LINE_SEPARATOR;
 
-    public CustomFormatter() {
-        CALENDAR = Calendar.getInstance();
+    protected CustomFormatter() {
+        CAL = Calendar.getInstance();
         LINE_SEPARATOR = System.getProperty("line.separator");
     }
 
@@ -26,12 +25,19 @@ public class CustomFormatter extends Formatter {
     public String format(LogRecord record) {
         StringBuilder sb = new StringBuilder();
         Date date = new Date(record.getMillis());
-        CALENDAR.setTime(date);
-        sb.append(CALENDAR.get(Calendar.HOUR_OF_DAY))
+        CAL.setTime(date);
+        String hour = String.valueOf(CAL.get(Calendar.HOUR_OF_DAY));
+        String minute = String.valueOf(CAL.get(Calendar.MINUTE));
+        String second = String.valueOf(CAL.get(Calendar.SECOND));
+        sb
+                .append(hour.length() == 1 ? "0" : "")
+                .append(hour)
                 .append(":")
-                .append(CALENDAR.get(Calendar.MINUTE))
+                .append(minute.length() == 1 ? "0" : "")
+                .append(minute)
                 .append(":")
-                .append(CALENDAR.get(Calendar.SECOND))
+                .append(second.length() == 1 ? "0" : "")
+                .append(second)
                 .append(" [")
                 .append(record.getLevel())
                 .append("] ");
@@ -51,7 +57,8 @@ public class CustomFormatter extends Formatter {
                 sw = new StringWriter();
                 pw = new PrintWriter(sw);
                 record.getThrown().printStackTrace(pw);
-                sb.append(LINE_SEPARATOR)
+                sb
+                        .append(LINE_SEPARATOR)
                         .append(sw.toString());
             } finally {
                 if (pw != null) {
@@ -59,7 +66,7 @@ public class CustomFormatter extends Formatter {
                 }
             }
         }
-        sb.append(LINE_SEPARATOR);
-        return sb.toString();
+        return sb.append(LINE_SEPARATOR).toString()
+                .replaceAll(ConvoSyncServer.COLOR_CHAR + "\\w", "");
     }
 }

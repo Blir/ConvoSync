@@ -1,4 +1,4 @@
-package blir.net;
+package com.minepop.servegame.convosync.net;
 
 import java.io.Serializable;
 

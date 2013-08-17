@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.ConvoSync
-version: Beta 1.2
+version: 1.0.0
 author: Blir
 softdepend: [Essentials]
 commands:
@@ -21,8 +21,13 @@ commands:
     permission-message: §cYou don't have permission to use this command.
   ccmd:
     description: Used to execute commands on another server.
-    usage: §c/<command> <server name> <command name> [args]
+    usage: §cIf the server name has a space in it, use quotes around the server name. /<command> <server name> <command name> [args] 
     permission: convosync.ccmd
+    permission-message: §cYou don't have permission to use this command.
+  togglecs:
+    description: Toggles cross-server chat for you.
+    usage: §c/<command>
+    permission: convosync.togglecs
     permission-message: §cYou don't have permission to use this command.
 permissions:
   convosync.*:
@@ -31,6 +36,7 @@ permissions:
       convosync.csay: true
       convosync.ctell: true
       convosync.ccmd: true
+      convosync.togglecs: true
   convosync.convosync:
     description: Allows use of the /convosync command.
   convosync.csay:
@@ -39,4 +45,6 @@ permissions:
     description: Allows use of the /ctell command.
   convosync.ccmd:
     description: Allows use of the /ccmd command.
+  convosync.togglecs:
+    description: Allows use of the /togglecs command.
     
