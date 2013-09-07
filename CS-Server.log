@@ -1,0 +1,9 @@
+17:53:25 [INFO] September 4, 2013
+17:53:25 [INFO] ConvoSyncServer 1.0.2 Dev 1.0
+17:53:25 [CONFIG] Java Version: 1.7.0_25
+17:53:25 [CONFIG] OS Architexture: amd64
+17:53:25 [CONFIG] OS Name: Windows 7
+17:53:25 [CONFIG] OS Version: 6.1
+17:53:50 [INFO] ServerSocket[addr=0.0.0.0/0.0.0.0,localport=25000]
+17:53:54 [INFO] Executing command STOP
+17:53:54 [INFO] Closing ConvoSyncServer 1.0.2 Dev 1.0
