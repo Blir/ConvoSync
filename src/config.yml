@@ -1,6 +1,6 @@
 port: 25000
-ip: null
-password: null
+ip: X
+password: X
 #If this many players are on the server, it will not sync chat with the other servers.
 max-players: 25
 #If true, players from other servers can execute commands on this server
