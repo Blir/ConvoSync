@@ -14,7 +14,7 @@ notif:
   player-death: false
   #If true, AFK notifications will be displayed cross-server.
   #This is experimental;
-  #sometimes AFK notifications may be displayed when they shouldn't.
+  #Sometimes AFK notifications may be displayed when they shouldn't.
   afk: false
 auto-reconnect:
   #I do not recommend setting it to auto reconnect after the socket is closed.
