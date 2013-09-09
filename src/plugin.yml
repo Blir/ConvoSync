@@ -6,7 +6,7 @@ softdepend: [Essentials]
 commands:
   convosync:
     description: Used to manage the ConvoSync plugin.
-    usage: §c/<command> <setip|setport|reconnect|status|setmaxplayers> [other parameters]
+    usage: §c/<command> <setip|setport|reconnect|disconnect|status|setmaxplayers> [other parameters]
     permission: convosync.convosync
     permission-message: §cYou don't have permission to use this command.
   csay:
@@ -47,4 +47,5 @@ permissions:
     description: Allows use of the /ccmd command.
   convosync.togglecs:
     description: Allows use of the /togglecs command.
+    default: true
     
