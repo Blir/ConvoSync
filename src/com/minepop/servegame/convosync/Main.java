@@ -2,7 +2,6 @@ package com.minepop.servegame.convosync;
 
 import blir.swing.QuickGUI;
 import blir.swing.listener.InputListener;
-import blir.swing.listener.InputOrCancelListener;
 import com.minepop.servegame.convosync.application.ConvoSyncClient;
 import com.minepop.servegame.convosync.server.ConvoSyncServer;
 import java.io.IOException;
@@ -14,7 +13,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.2";
+    public static final String VERSION = "1.0.3 Dev 1.0";
     
     public static enum Action {
 

@@ -235,7 +235,7 @@ public class ConvoSyncClient {
         options.add(cls);
         options.add(toggleDebug);
         options.add(about);
-        //options.add(refresh);
+        options.add(refresh);
         cpane.setAutoscrolls(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.getContentPane().addHierarchyBoundsListener(new HierarchyBoundsListener() {
@@ -295,9 +295,20 @@ public class ConvoSyncClient {
                     log1("You must authenticate before you can send any messages.");
                     return;
                 }
-                out(input.getText(), false);
-                log2(input.getText());
-                input.setText("");
+                if (input.getText().charAt(0) == '/') {
+                    int delim = input.getText().indexOf(" ");
+                    if (delim > 0) {
+                        String server = input.getText().substring(1, delim);
+                        String cmd = input.getText().substring(delim);
+                        out(new CommandMessage(name, server, cmd));
+                    } else {
+                        log1("Usage: /<server> <command>");
+                    }
+                } else {
+                    out(input.getText(), false);
+                    log2(input.getText());
+                    input.setText("");
+                }
             }
         });
         reconnect.addActionListener(new ActionListener() {
@@ -363,9 +374,8 @@ public class ConvoSyncClient {
 
                     @Override
                     public void onInput(String input) {
-                        //out("p" + recip + " " + input.replaceAll(" ", "_"));
-                        //log3(input, recip);
-                        QuickGUI.msgBox("ConvoSyncClient - Warning", "PMs are not currently supported.");
+                        out(new PrivateMessage(recip, name, input, "CS-Client"));
+                        log3(input, recip);
                         pm = false;
                     }
                 }, false);
@@ -445,18 +455,10 @@ public class ConvoSyncClient {
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
                                     if (!auth) {
-                                        console.setText("Failed to authenticate with server.");
-                                        QuickGUI.inputBox("ConvoSyncClient - Enter Password", "Enter the password to connect to the server:", new InputOrCancelListener() {
-                                            @Override
-                                            public void onCancel() {
-                                            }
-
-                                            @Override
-                                            public void onInput(String input) {
-                                                password = input;
-                                                reconnect();
-                                            }
-                                        }, true);
+                                        console.setText("Invalid user name or password.");
+                                        name = null;
+                                        password = null;
+                                        task3();
                                     }
                                     continue;
                                 }
@@ -514,7 +516,7 @@ public class ConvoSyncClient {
             }
         }
     }
-    
+
     @Override
     public String toString() {
         return "ConvoSyncClient " + Main.VERSION;

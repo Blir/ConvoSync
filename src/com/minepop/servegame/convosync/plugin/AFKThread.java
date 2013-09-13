@@ -63,6 +63,19 @@ public class AFKThread extends Thread {
         users.add(csuser);
         return csuser;
     }
+    
+    private User getUser(String name) {
+        for (User user : users) {
+            if (user.name.equals(name)) {
+                return user;
+            }
+        }
+        return null;
+    }
+    
+    public void remove(String name) {
+        users.remove(getUser(name));
+    }
 
     private static class User {
 

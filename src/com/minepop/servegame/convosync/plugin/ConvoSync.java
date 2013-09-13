@@ -30,7 +30,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     private enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, REGISTER, SETMAXPLAYERS
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -40,6 +40,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     protected boolean connected, shouldBe = true, auth, isEss;
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
     private List<User> users = new ArrayList<User>();
+    private AFKThread afkThread;
 
     @Override
     public void onEnable() {
@@ -48,8 +49,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
             ip = getConfig().getString("ip");
             password = getConfig().getString("password");
             max = getConfig().getInt("max-players");
-        } catch (NumberFormatException ex) {
-        } catch (NullPointerException ex) {
+        } catch (NumberFormatException ignore) {
+        } catch (NullPointerException ignore) {
         }
         if (ip == null || ip.equals("null") || port == 0 || password == null || password.equals("null") || ip.equals("X") || password.equals("X")) {
             getLogger().warning("IP, port, or password missing.");
@@ -169,6 +170,17 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         return true;
                     }
                     sender.sendMessage(ChatColor.GREEN + "Now using max player count of " + ChatColor.BLUE + max + ChatColor.GREEN + ".");
+                    return true;
+                case REGISTER:
+                    if (!(sender instanceof Player)) {
+                        sender.sendMessage(ChatColor.RED + "You must be a player to use this command!");
+                        return true;
+                    }
+                    if (args.length != 3 || !args[1].equals(args[2])) {
+                        sender.sendMessage(ChatColor.RED + "/convosync register <password> <confirm password>");
+                        return true;
+                    }
+                    out(new UserRegistration(sender.getName(), args[1]), false);
                     return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {
@@ -306,6 +318,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         if (getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getQuitMessage(), false);
         }
+        afkThread.remove(evt.getPlayer().getName());
         out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
     }
 
@@ -445,7 +458,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
             }
         }.start();
         if (getServer().getPluginManager().isPluginEnabled("Essentials") && getConfig().getBoolean("notif.afk")) {
-            new AFKThread(this).start();
+            afkThread = new AFKThread(this);
+            afkThread.start();
         }
         getLogger().info(socket.toString());
     }

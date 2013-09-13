@@ -3,21 +3,10 @@ package com.minepop.servegame.convosync.server;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Scanner;
+import java.util.*;
 import java.util.logging.*;
 
 /**
@@ -37,6 +26,7 @@ public class ConvoSyncServer {
     private List<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
+    private List<User> users = new ArrayList<User>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
     private char chatColor;
 
@@ -49,7 +39,7 @@ public class ConvoSyncServer {
 
     public void run(String[] startupArgs) throws IOException {
         Handler handler = new ConsoleHandler();
-        Formatter formatter = new CompactFormatter() {
+        java.util.logging.Formatter formatter = new CompactFormatter() {
             @Override
             public String format(LogRecord rec) {
                 return super.format(rec).replaceAll(COLOR_CHAR + "\\w", "");
@@ -71,6 +61,14 @@ public class ConvoSyncServer {
         LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
         LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
+        try {
+            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("users.sav")));
+            users = (ArrayList<User>) ois.readObject();
+            ois.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
+        } catch (ClassNotFoundException ignore) {
+        }
         Properties p = null;
         try {
             p = new Properties();
@@ -408,13 +406,17 @@ public class ConvoSyncServer {
                         continue;
                     }
                     if (input instanceof ApplicationAuthenticationRequest) {
-                        ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
-                        localname = (name = authReq.NAME);
                         type = ClientType.APPLICATION;
-                        auth = authReq.PASSWORD.equals(server.applicationPassword);
+                        ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
+                        User user = server.getUser(authReq.NAME);
+                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD);
                         sendMsg(new AuthenticationRequestResponse(auth));
-                        sendMsg(new PlayerListMessage(server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));
-                        server.out(name + " has joined.", this);
+                        if (auth) {
+                            localname = (name = authReq.NAME);
+                            sendMsg(new PlayerListMessage(server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));
+                            server.out(name + " has joined.", this);
+                            server.userMap.put(name, "CS-Client");
+                        }
                         continue;
                     }
                     if (input instanceof SetEnabledProperty) {
@@ -424,6 +426,16 @@ public class ConvoSyncServer {
                                 + " player count.", this);
                         if (!enabled) {
                             server.out("This doesn't affect cross-server private messages or commands.", this);
+                        }
+                        continue;
+                    }
+                    if (input instanceof UserRegistration) {
+                        UserRegistration reg = (UserRegistration) input;
+                        if (server.isUserRegistered(reg.USER)) {
+                            sendMsg(new PlayerMessage("You're already registered.", reg.USER), false);
+                        } else {
+                            server.users.add(new User(reg));
+                            sendMsg(new PlayerMessage("You've successfully registered.", reg.USER), false);
                         }
                         continue;
                     }
@@ -512,6 +524,13 @@ public class ConvoSyncServer {
             case STOP:
                 open = false;
                 try {
+                    ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("users.sav")));
+                    oos.writeObject(users.toArray(new User[users.size()]));
+                    oos.close();
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, "Error saving user data.", ex);
+                }
+                try {
                     Properties p = new Properties();
                     FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
                     p.setProperty("chat-color", Character.toString(chatColor));
@@ -519,7 +538,7 @@ public class ConvoSyncServer {
                     p.store(fos, null);
                     fos.close();
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "Couldn't save config:", ex);
+                    LOGGER.log(Level.WARNING, "Error saving config.", ex);
                 }
                 try {
                     close(args.length > 0 && args[0].equalsIgnoreCase("force"));
@@ -631,5 +650,33 @@ public class ConvoSyncServer {
 
     private static String format(String s) {
         return s.replaceAll(COLOR_CHAR + "\\w", "");
+    }
+
+    private static class User {
+
+        private final String NAME, PASSWORD;
+
+        public User(UserRegistration reg) {
+            this.NAME = reg.USER;
+            this.PASSWORD = reg.PASSWORD;
+        }
+    }
+
+    private boolean isUserRegistered(String name) {
+        for (User user : users) {
+            if (user.NAME.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private User getUser(String name) {
+        for (User user : users) {
+            if (user.NAME.equals(name)) {
+                return user;
+            }
+        }
+        return null;
     }
 }
