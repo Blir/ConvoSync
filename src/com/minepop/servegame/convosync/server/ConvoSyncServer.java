@@ -14,6 +14,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Scanner;
@@ -33,7 +34,7 @@ public class ConvoSyncServer {
     private ServerSocket socket;
     private Scanner in;
     private boolean open = true, debug = false, prefix = true;
-    private ArrayList<Client> clients = new ArrayList<Client>();
+    private List<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
@@ -70,8 +71,9 @@ public class ConvoSyncServer {
         LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
         LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
+        Properties p = null;
         try {
-            Properties p = new Properties();
+            p = new Properties();
             FileInputStream fis = new FileInputStream(new File("CS-Server.properties"));
             p.load(fis);
             String prop = p.getProperty("chat-color");
@@ -100,6 +102,25 @@ public class ConvoSyncServer {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             } catch (ArrayIndexOutOfBoundsException ex) {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
+            }
+        }
+        if (p != null) {
+            String prop;
+            try {
+                port = Integer.parseInt(p.getProperty("port"));
+            } catch (NumberFormatException ignore) {
+            }
+            prop = p.getProperty("name");
+            if (prop != null) {
+                name = prop;
+            }
+            prop = p.getProperty("application-password");
+            if (prop != null) {
+                applicationPassword = prop;
+            }
+            prop = p.getProperty("plugin-password");
+            if (prop != null) {
+                pluginPassword = prop;
             }
         }
         while (port == 0) {
@@ -160,7 +181,7 @@ public class ConvoSyncServer {
                             cmd = Command.HELP;
                         }
                         String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
-                        onCommand(cmd, args);
+                        dispatchCommand(cmd, args);
                     } else {
                         out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                     }
@@ -484,7 +505,7 @@ public class ConvoSyncServer {
         return "ConvoSyncServer " + Main.VERSION;
     }
 
-    private void onCommand(Command cmd, String[] args) {
+    private void dispatchCommand(Command cmd, String[] args) {
         LOGGER.log(Level.INFO, "Executing command {0}", cmd);
         switch (cmd) {
             case EXIT:
@@ -498,7 +519,7 @@ public class ConvoSyncServer {
                     p.store(fos, null);
                     fos.close();
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "Couldn't load config:", ex);
+                    LOGGER.log(Level.WARNING, "Couldn't save config:", ex);
                 }
                 try {
                     close(args.length > 0 && args[0].equalsIgnoreCase("force"));
@@ -567,13 +588,14 @@ public class ConvoSyncServer {
                 if (userMap.isEmpty()) {
                     LOGGER.log(Level.INFO, "No known online users.");
                 } else {
+                    LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
                     for (String key : userMap.keySet()) {
                         LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
                     }
                 }
                 break;
             case NAME:
-                LOGGER.log(Level.INFO, "Name: {0}", (name = args.length > 0 ? args[0] : name));
+                LOGGER.log(Level.INFO, "Name: {0}", args.length > 0 ? name = args[0] : name);
                 break;
             case HELP:
                 LOGGER.log(Level.INFO, "Commands:\n"
@@ -591,14 +613,17 @@ public class ConvoSyncServer {
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, "Debug mode {0}.", (debug = !debug) ? "enabled" : "disabled");
-                for (Handler handler : LOGGER.getHandlers()) {
-                    if (debug) {
+                if (debug) {
+                    for (Handler handler : LOGGER.getHandlers()) {
                         handler.setLevel(Level.FINEST);
-                    } else {
+                    }
+                    LOGGER.setLevel(Level.FINEST);
+                } else {
+                    for (Handler handler : LOGGER.getHandlers()) {
                         handler.setLevel(Level.CONFIG);
                     }
+                    LOGGER.setLevel(Level.CONFIG);
                 }
-                LOGGER.setLevel(debug ? Level.FINEST : Level.CONFIG);
                 break;
         }
     }
