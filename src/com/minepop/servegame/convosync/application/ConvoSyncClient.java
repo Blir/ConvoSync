@@ -18,7 +18,7 @@ import javax.swing.text.DefaultCaret;
  *
  * @author Blir
  */
-public class ConvoSyncClient {
+public final class ConvoSyncClient {
 
     private String ip, name, password;
     private int port;
@@ -143,7 +143,7 @@ public class ConvoSyncClient {
 
     private void task3() {
         if (name == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Name", "Enter your name:", new InputListener() {
+            QuickGUI.inputBox("ConvoSyncClient - Enter Name", "Enter your MC user name:", new InputListener() {
                 @Override
                 public void onInput(final String input) {
                     if (input.toLowerCase().contains("server")) {
@@ -174,7 +174,7 @@ public class ConvoSyncClient {
 
     private void task4() {
         if (password == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Password", "Enter the password to connect to the server:", new InputListener() {
+            QuickGUI.inputBox("ConvoSyncClient - Enter Password", "Enter your password:", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     password = input;
@@ -307,8 +307,8 @@ public class ConvoSyncClient {
                 } else {
                     out(input.getText(), false);
                     log2(input.getText());
-                    input.setText("");
                 }
+                input.setText("");
             }
         });
         reconnect.addActionListener(new ActionListener() {

@@ -63,7 +63,7 @@ public class ConvoSyncServer {
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
         try {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("users.sav")));
-            users = (ArrayList<User>) ois.readObject();
+            users = Arrays.asList((User[]) ois.readObject());
             ois.close();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
@@ -321,6 +321,15 @@ public class ConvoSyncServer {
         }
     }
 
+    private Client getClient(String name) {
+        for (Client client : clients) {
+            if (client.localname.equals(name)) {
+                return client;
+            }
+        }
+        return null;
+    }
+
     private static class Client extends Thread {
 
         private enum ClientType {
@@ -400,6 +409,10 @@ public class ConvoSyncServer {
                         sendMsg(new AuthenticationRequestResponse(auth));
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
+                            if (server.userMap.get(element) != null) {
+                                server.out(new PlayerMessage(element, "You cannot be logged into the client and the game simultaneously."), this);
+                                server.getClient(element).sendMsg(new DisconnectMessage(), true);
+                            }
                             server.userMap.put(element, localname);
                         }
                         server.out(name + " has connected.", this);
@@ -409,7 +422,7 @@ public class ConvoSyncServer {
                         type = ClientType.APPLICATION;
                         ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
                         User user = server.getUser(authReq.NAME);
-                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD);
+                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD) && server.userMap.get(name) == null;
                         sendMsg(new AuthenticationRequestResponse(auth));
                         if (auth) {
                             localname = (name = authReq.NAME);
@@ -432,10 +445,10 @@ public class ConvoSyncServer {
                     if (input instanceof UserRegistration) {
                         UserRegistration reg = (UserRegistration) input;
                         if (server.isUserRegistered(reg.USER)) {
-                            sendMsg(new PlayerMessage("You're already registered.", reg.USER), false);
+                            sendMsg(new PlayerMessage(COLOR_CHAR + "cYou're already registered.", reg.USER), false);
                         } else {
                             server.users.add(new User(reg));
-                            sendMsg(new PlayerMessage("You've successfully registered.", reg.USER), false);
+                            sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
                         }
                         continue;
                     }
@@ -652,7 +665,7 @@ public class ConvoSyncServer {
         return s.replaceAll(COLOR_CHAR + "\\w", "");
     }
 
-    private static class User {
+    private static class User implements Serializable {
 
         private final String NAME, PASSWORD;
 
