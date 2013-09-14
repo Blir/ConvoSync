@@ -15,6 +15,6 @@ public class PlayerMessage extends ChatMessage {
     
     @Override
     public String toString() {
-        return "PlayerMessage[" + RECIPIENT + "," + MSG + "]";
+        return "PlayerMessage[" + MSG + "," + RECIPIENT + "]";
     }
 }

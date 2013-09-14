@@ -279,13 +279,16 @@ public class ConvoSyncServer {
         if (sender != null && !sender.auth) {
             return;
         }
-        String server = userMap.get(msg.RECIPIENT);
-        if (server == null && sender != null) {
+        String clientName = userMap.get(msg.RECIPIENT);
+        if (clientName.equals("CS-Client")) {
+            clientName = msg.RECIPIENT;
+        }
+        if (clientName == null && sender != null) {
             sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\"not found.", msg.SENDER));
             return;
         }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN && client.localname.equals(server)) {
+            if (client.type == Client.ClientType.PLUGIN && client.localname.equals(clientName)) {
                 client.sendMsg(msg);
             }
         }
@@ -295,8 +298,12 @@ public class ConvoSyncServer {
         if (sender != null && !sender.auth) {
             return;
         }
+        String clientName = userMap.get(msg.RECIPIENT);
+        if (clientName.equals("CS-Client")) {
+            clientName = msg.RECIPIENT;
+        }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN) {
+            if (client.localname.equals(clientName)) {
                 client.sendMsg(msg);
             }
         }
@@ -393,6 +400,10 @@ public class ConvoSyncServer {
                         server.notify(msg, ClientType.APPLICATION);
                         if (msg.JOIN) {
                             for (String element : msg.LIST) {
+                                if (server.userMap.get(element) != null) {
+                                    server.out(new PlayerMessage(element, "You cannot be logged into the client and the game simultaneously."), this);
+                                    server.getClient(element).sendMsg(new DisconnectMessage(), true);
+                                }
                                 server.userMap.put(element, localname);
                             }
                         } else {
@@ -429,6 +440,7 @@ public class ConvoSyncServer {
                         if (auth) {
                             localname = (name = authReq.NAME);
                             sendMsg(new PlayerListMessage(server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));
+                            server.notify(new PlayerListMessage(name, true), ClientType.APPLICATION);
                             server.out(name + " has joined.", this);
                             server.userMap.put(name, "CS-Client");
                         }
@@ -456,7 +468,12 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
-                        server.userMap.values().removeAll(Collections.singleton(localname));
+                        if (type == ClientType.PLUGIN) {
+                            server.userMap.values().removeAll(Collections.singleton(localname));
+                        } else {
+                            server.notify(new PlayerListMessage(name, false), ClientType.APPLICATION);
+                            server.userMap.remove(name);
+                        }
                         alive = false;
                         server.clients.remove(this);
                     }
@@ -503,7 +520,7 @@ public class ConvoSyncServer {
             try {
                 out.writeObject(obj);
                 out.flush();
-                LOGGER.log(Level.FINER, "{0} sent!", obj);
+                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, this});
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
                     LOGGER.log(Level.SEVERE, "Could not write object " + obj, ex);

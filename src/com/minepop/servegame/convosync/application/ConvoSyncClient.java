@@ -375,7 +375,6 @@ public final class ConvoSyncClient {
                     @Override
                     public void onInput(String input) {
                         out(new PrivateMessage(recip, name, input, "CS-Client"));
-                        log3(input, recip);
                         pm = false;
                     }
                 }, false);
@@ -390,10 +389,6 @@ public final class ConvoSyncClient {
         frame.setJMenuBar(mb);
 
         frame.setVisible(true);
-    }
-
-    private void log3(String s, String recip) {
-        console.setText(console.getText() + "\n[PM][To: " + recip + "] " + s);
     }
 
     private void log2(String s) {
