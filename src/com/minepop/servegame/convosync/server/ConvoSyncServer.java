@@ -63,7 +63,7 @@ public class ConvoSyncServer {
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
         try {
             ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("users.sav")));
-            users = Arrays.asList((User[]) ois.readObject());
+            users.addAll(Arrays.asList((User[]) ois.readObject()));
             ois.close();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
@@ -391,10 +391,12 @@ public class ConvoSyncServer {
                     if (input instanceof PlayerListMessage) {
                         PlayerListMessage msg = (PlayerListMessage) input;
                         server.notify(msg, ClientType.APPLICATION);
-                        for (String element : msg.LIST) {
-                            if (msg.JOIN) {
+                        if (msg.JOIN) {
+                            for (String element : msg.LIST) {
                                 server.userMap.put(element, localname);
-                            } else {
+                            }
+                        } else {
+                            for (String element : msg.LIST) {
                                 server.userMap.remove(element);
                             }
                         }

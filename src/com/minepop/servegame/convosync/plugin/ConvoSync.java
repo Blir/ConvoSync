@@ -315,11 +315,11 @@ public class ConvoSync extends JavaPlugin implements Listener {
             getServer().broadcastMessage(ChatColor.RED + "Cross-server chat is now enabled due to reduced player count.");
             out(new SetEnabledProperty(true), false);
         }
+        out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
         if (getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getQuitMessage(), false);
         }
         afkThread.remove(evt.getPlayer().getName());
-        out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
