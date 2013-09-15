@@ -36,7 +36,7 @@
             </MenuItem>
             <MenuItem class="javax.swing.JCheckBoxMenuItem" name="jCheckBoxMenuItem1">
               <Properties>
-                <Property name="text" type="java.lang.String" value="Use Time Stamps"/>
+                <Property name="text" type="java.lang.String" value="Time Stamps"/>
               </Properties>
             </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="jMenuItem3">
@@ -112,7 +112,7 @@
   <SubComponents>
     <Container class="javax.swing.JSplitPane" name="jSplitPane1">
       <Properties>
-        <Property name="dividerLocation" type="int" value="275"/>
+        <Property name="dividerLocation" type="int" value="350"/>
         <Property name="resizeWeight" type="double" value="1.0"/>
         <Property name="alignmentY" type="float" value="131.0"/>
       </Properties>

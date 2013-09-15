@@ -27,6 +27,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
         CAL = Calendar.getInstance();
         onToggleWordWrap(null);
+        setLocationRelativeTo(null);
     }
 
     /**
@@ -61,7 +62,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             }
         });
 
-        jSplitPane1.setDividerLocation(275);
+        jSplitPane1.setDividerLocation(350);
         jSplitPane1.setResizeWeight(1.0);
         jSplitPane1.setAlignmentY(131.0F);
 
@@ -117,7 +118,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         });
         jMenu1.add(jCheckBoxMenuItem2);
 
-        jCheckBoxMenuItem1.setText("Use Time Stamps");
+        jCheckBoxMenuItem1.setText("Time Stamps");
         jMenu1.add(jCheckBoxMenuItem1);
 
         jMenuItem3.setText("Refresh");
@@ -202,6 +203,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         }
         jLabel1.setText("Press enter to send. [PM: " + userList.getSelectedValue() + "]");
         client.pm = true;
+        input.grabFocus();
     }//GEN-LAST:event_onUserListSelection
 
     private void windowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_windowClosing

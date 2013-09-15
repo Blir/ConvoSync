@@ -2,6 +2,8 @@ package com.minepop.servegame.convosync.application;
 
 import blir.swing.QuickGUI;
 import blir.swing.listener.*;
+import blir.swing.quickgui.InputBox;
+import blir.swing.quickgui.MsgBox;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
@@ -32,14 +34,11 @@ public final class ConvoSyncClient {
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {
-            QuickGUI.msgBox("ConvoSyncClient - Warning", "Unable to use Windows look and feel. Using default look and feel.");
         } catch (InstantiationException ex) {
-            QuickGUI.msgBox("ConvoSyncClient - Warning", "Unable to use Windows look and feel. Using default look and feel.");
         } catch (IllegalAccessException ex) {
-            QuickGUI.msgBox("ConvoSyncClient - Warning", "Unable to use Windows look and feel. Using default look and feel.");
         } catch (UnsupportedLookAndFeelException ex) {
-            QuickGUI.msgBox("ConvoSyncClient - Warning", "Unable to use Windows look and feel. Using default look and feel.");
         }
+        // ignore all of those; just use the default look and feel
 
         new ConvoSyncClient().run(args);
     }
@@ -94,13 +93,13 @@ public final class ConvoSyncClient {
 
     private void task1() {
         if (ip == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter IP", "Enter the IP of the server:", "127.0.0.1", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter IP", "Enter the IP of the server:", "127.0.0.1", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     ip = input;
                     task2();
                 }
-            }, true);
+            }, true).setVisible(true);
         } else {
             task2();
         }
@@ -108,22 +107,22 @@ public final class ConvoSyncClient {
 
     private void task2() {
         if (port == 0) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:", "25000", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:", "25000", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     try {
                         port = Integer.parseInt(input);
                         task3();
                     } catch (NumberFormatException ex) {
-                        QuickGUI.msgBox("ConvoSyncClient - Error", "\"" + input + "\" is not a valid port.", new Runnable() {
+                        new MsgBox("ConvoSyncClient - Error", "\"" + input + "\" is not a valid port.", new Runnable() {
                             @Override
                             public void run() {
                                 task2();
                             }
-                        });
+                        }, true).setVisible(true);
                     }
                 }
-            }, true);
+            }, true).setVisible(true);
         } else {
             task3();
         }
@@ -131,30 +130,13 @@ public final class ConvoSyncClient {
 
     private void task3() {
         if (name == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:", new InputListener() {
                 @Override
                 public void onInput(final String input) {
-                    if (input.toLowerCase().contains("server")) {
-                        QuickGUI.msgBox("ConvoSyncClient - Invalid Name", "Your name cannot contain any variant of \"server\".", new Runnable() {
-                            @Override
-                            public void run() {
-                                task3();
-                            }
-                        });
-                        return;
-                    } else if (input.contains(" ") || input.contains("_")) {
-                        QuickGUI.msgBox("ConvoSyncClient - Invalid Name", "Your name cannot contain spaces or underscores.", new Runnable() {
-                            @Override
-                            public void run() {
-                                task3();
-                            }
-                        });
-                        return;
-                    }
                     name = input;
                     task4();
                 }
-            }, true);
+            }, true).setVisible(true);
         } else {
             task4();
         }
@@ -162,13 +144,13 @@ public final class ConvoSyncClient {
 
     private void task4() {
         if (password == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     password = input;
                     task5();
                 }
-            }, true);
+            }, true).setVisible(true);
         } else {
             task5();
         }
@@ -178,18 +160,14 @@ public final class ConvoSyncClient {
         if (connect()) {
             gui.setVisible(true);
         } else {
-            QuickGUI.yesOrNoBox("ConvoSyncClient - Error", "Could not connect to server. Retry?", new YesOrNoListener() {
+            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry.", new Runnable() {
                 @Override
-                public void onYes() {
+                public void run() {
                     ip = null;
                     port = 0;
                     task1();
                 }
-
-                @Override
-                public void onNo() {
-                }
-            });
+            }, true).setVisible(true);
         }
     }
 
@@ -258,7 +236,7 @@ public final class ConvoSyncClient {
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
                                     if (!auth) {
-                                        gui.setText("Invalid login. Make sure you're logged out of Minecraft, registered on the CS server, and check your user name and password.");
+                                        gui.log("Invalid login. Make sure you're logged out of Minecraft, registered on the CS server, and check your user name and password.");
                                         name = null;
                                         password = null;
                                         disconnect();
@@ -267,7 +245,7 @@ public final class ConvoSyncClient {
                                     continue;
                                 }
                                 if (input instanceof DisconnectMessage) {
-                                    gui.logChat("The server has disconnected you.");
+                                    gui.log("The server has disconnected you.");
                                     disconnect();
                                     continue;
                                 }
@@ -275,10 +253,10 @@ public final class ConvoSyncClient {
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, null, ex);
                             connected = false;
-                            gui.setText("Connection lost. Try to reconnect.");
+                            gui.log("Connection lost. Try to reconnect.");
                             continue;
                         } catch (ClassNotFoundException ex) {
-                            QuickGUI.errorBox("ConvoSyncClient - Error", "Fatal error: " + ex, ex.hashCode());
+                            System.exit(-1);
                             connected = false;
                         }
                     }

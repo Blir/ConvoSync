@@ -26,7 +26,7 @@ public class ConvoSyncServer {
     private Scanner in;
     private boolean open = true, debug = false, prefix = true;
     private List<Client> clients = new ArrayList<Client>();
-    private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
+    private String name = "ConvoSyncServer", pluginPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
     private List<User> users = new ArrayList<User>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
@@ -93,8 +93,6 @@ public class ConvoSyncServer {
                     port = Integer.parseInt(arg.split(":")[1]);
                 } else if (arg.startsWith("Name:")) {
                     name = arg.split(":")[1];
-                } else if (arg.startsWith("ApplicationPassword:")) {
-                    applicationPassword = arg.split(":")[1];
                 } else if (arg.startsWith("PluginPassword:")) {
                     pluginPassword = arg.split(":")[1];
                 }
@@ -113,10 +111,6 @@ public class ConvoSyncServer {
             prop = p.getProperty("name");
             if (prop != null) {
                 name = prop;
-            }
-            prop = p.getProperty("application-password");
-            if (prop != null) {
-                applicationPassword = prop;
             }
             prop = p.getProperty("plugin-password");
             if (prop != null) {
@@ -138,10 +132,6 @@ public class ConvoSyncServer {
         while (pluginPassword == null || pluginPassword.equals("")) {
             System.out.print("Enter a password that the ConvoSync plugins will use to connect: ");
             pluginPassword = in.nextLine();
-        }
-        while (applicationPassword == null || applicationPassword.equals("")) {
-            System.out.print("Enter a password that the ConvoSync application clients will use to connect: ");
-            applicationPassword = in.nextLine();
         }
         open();
         final ConvoSyncServer server = this;
