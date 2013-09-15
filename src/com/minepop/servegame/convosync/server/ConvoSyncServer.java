@@ -8,6 +8,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.*;
+import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
+import static com.minepop.servegame.convosync.Main.format;
 
 /**
  *
@@ -42,7 +44,7 @@ public class ConvoSyncServer {
         java.util.logging.Formatter formatter = new CompactFormatter() {
             @Override
             public String format(LogRecord rec) {
-                return super.format(rec).replaceAll(COLOR_CHAR + "\\w", "");
+                return Main.format(super.format(rec));
             }
         };
         handler.setFormatter(formatter);
@@ -677,11 +679,6 @@ public class ConvoSyncServer {
                 }
                 break;
         }
-    }
-    protected static final char COLOR_CHAR = '\u00A7';
-
-    private static String format(String s) {
-        return s.replaceAll(COLOR_CHAR + "\\w", "");
     }
 
     private static class User implements Serializable {
