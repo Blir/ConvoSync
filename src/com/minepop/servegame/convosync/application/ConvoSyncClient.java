@@ -9,6 +9,7 @@ import java.awt.Dimension;
 import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
+import java.util.Calendar;
 import java.util.logging.*;
 import javax.swing.*;
 import javax.swing.event.*;
@@ -20,23 +21,15 @@ import javax.swing.text.DefaultCaret;
  */
 public final class ConvoSyncClient {
 
-    private String ip, name, password;
+    private ConvoSyncGUI gui;
+    protected String ip, name, password;
     private int port;
     private Socket socket;
-    private boolean pm, connected, auth, debug;
+    protected boolean pm, connected, auth;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private JFrame frame;
-    private JTextArea console;
-    private JTextField input;
-    private JMenuBar mb;
-    private JMenu options;
-    private JMenuItem reconnect, cls, refresh, about, toggleDebug;
-    private JScrollPane cpane, lpane;
-    private JList<String> list;
-    private DefaultListModel<String> model;
-    private DefaultListSelectionModel selection;
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
+    private static final Calendar CAL = Calendar.getInstance();
 
     /**
      * @param args the command line arguments
@@ -66,14 +59,14 @@ public final class ConvoSyncClient {
             }
         };
         handler.setFormatter(formatter);
-        handler.setLevel(Level.CONFIG);
+        handler.setLevel(Level.FINEST);
         LOGGER.addHandler(handler);
         handler = new FileHandler("CS-Client.log", true);
         handler.setFormatter(formatter);
-        handler.setLevel(Level.CONFIG);
+        handler.setLevel(Level.FINEST);
         LOGGER.addHandler(handler);
         LOGGER.setUseParentHandlers(false);
-        LOGGER.setLevel(Level.CONFIG);
+        LOGGER.setLevel(Level.FINEST);
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
                 .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
@@ -101,6 +94,7 @@ public final class ConvoSyncClient {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             }
         }
+        setup();
         task1();
     }
 
@@ -120,7 +114,7 @@ public final class ConvoSyncClient {
 
     private void task2() {
         if (port == 0) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Port", "Enter the port the server is hosted on:", "25000", new InputListener() {
+            QuickGUI.inputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:", "25000", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     try {
@@ -143,7 +137,7 @@ public final class ConvoSyncClient {
 
     private void task3() {
         if (name == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Name", "Enter your MC user name:", new InputListener() {
+            QuickGUI.inputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:", new InputListener() {
                 @Override
                 public void onInput(final String input) {
                     if (input.toLowerCase().contains("server")) {
@@ -174,7 +168,7 @@ public final class ConvoSyncClient {
 
     private void task4() {
         if (password == null) {
-            QuickGUI.inputBox("ConvoSyncClient - Enter Password", "Enter your password:", new InputListener() {
+            QuickGUI.inputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     password = input;
@@ -188,7 +182,7 @@ public final class ConvoSyncClient {
 
     private void task5() {
         if (connect()) {
-            setup();
+            gui.setVisible(true);
         } else {
             QuickGUI.yesOrNoBox("ConvoSyncClient - Error", "Could not connect to server. Retry?", new YesOrNoListener() {
                 @Override
@@ -206,209 +200,42 @@ public final class ConvoSyncClient {
     }
 
     private void setup() {
-        frame = new JFrame("ConvoSyncClient " + Main.VERSION);
-        console = new JTextArea();
-        input = new JTextField();
-        mb = new JMenuBar();
-        options = new JMenu("Options");
-        reconnect = new JMenuItem("Reconnect");
-        cls = new JMenuItem("Clear Console");
-        refresh = new JMenuItem("Refresh");
-        about = new JMenuItem("About");
-        toggleDebug = new JMenuItem("Debug");
-        JButton bugfix = new JButton();
-        cpane = new JScrollPane(console);
-        model = new DefaultListModel<String>();
-        list = new JList<String>(model);
-        lpane = new JScrollPane(list);
-        selection = new DefaultListSelectionModel();
-
-        frame.setSize(330, 405);
-        frame.setMinimumSize(new Dimension(330, 405));
-        cpane.setBounds(5, 5, 200, 300);
-        lpane.setBounds(210, 5, 95, 300);
-        input.setBounds(5, 310, 300, 30);
-        list.setBounds(5, 5, 230, 150);
-
-        mb.add(options);
-        options.add(reconnect);
-        options.add(cls);
-        options.add(toggleDebug);
-        options.add(about);
-        options.add(refresh);
-        cpane.setAutoscrolls(true);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.getContentPane().addHierarchyBoundsListener(new HierarchyBoundsListener() {
-            @Override
-            public void ancestorMoved(HierarchyEvent he) {
-            }
-
-            @Override
-            public void ancestorResized(HierarchyEvent he) {
-                cpane.setSize(frame.getWidth() - 130, frame.getHeight() - 105);
-                lpane.setBounds(frame.getWidth() - 120, lpane.getY(), lpane.getWidth(), frame.getHeight() - 105);
-                input.setBounds(5, frame.getHeight() - 95, frame.getWidth() - 30, 30);
-            }
-        });
-        frame.setLocationRelativeTo(null);
-        frame.addWindowListener(new WindowListener() {
-            @Override
-            public void windowOpened(WindowEvent e) {
-            }
-
-            @Override
-            public void windowClosing(WindowEvent e) {
-                disconnect();
-            }
-
-            @Override
-            public void windowClosed(WindowEvent e) {
-            }
-
-            @Override
-            public void windowIconified(WindowEvent e) {
-            }
-
-            @Override
-            public void windowDeiconified(WindowEvent e) {
-            }
-
-            @Override
-            public void windowActivated(WindowEvent e) {
-            }
-
-            @Override
-            public void windowDeactivated(WindowEvent e) {
-            }
-        });
-        console.setEditable(false);
-        console.setLineWrap(true);
-        console.setWrapStyleWord(true);
-        ((DefaultCaret) console.getCaret()).setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-        input.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                if (input.getText().equals("")) {
-                    return;
-                }
-                if (!auth) {
-                    log1("You must authenticate before you can send any messages.");
-                    return;
-                }
-                if (input.getText().charAt(0) == '/') {
-                    int delim = input.getText().indexOf(" ");
-                    if (delim > 0) {
-                        String server = input.getText().substring(1, delim);
-                        String cmd = input.getText().substring(delim);
-                        out(new CommandMessage(name, server, cmd));
-                    } else {
-                        log1("Usage: /<server> <command>");
-                    }
-                } else {
-                    out(input.getText(), false);
-                    log2(input.getText());
-                }
-                input.setText("");
-            }
-        });
-        reconnect.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                reconnect();
-            }
-        });
-        cls.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                console.setText("");
-            }
-        });
-        refresh.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                list.clearSelection();
-            }
-        });
-        about.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                QuickGUI.msgBox("ConvoSyncClient - About", "Compatible with versions: CS-1.0.0,CS-1.0.1");
-            }
-        });
-        toggleDebug.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent ae) {
-                log1((debug = !debug) ? "Debugging enabled." : "Debugging disabled.");
-                if (debug) {
-                    for (Handler h : LOGGER.getHandlers()) {
-                        h.setLevel(Level.FINEST);
-                    }
-                    LOGGER.setLevel(Level.FINEST);
-                } else {
-                    for (Handler h : LOGGER.getHandlers()) {
-                        h.setLevel(Level.CONFIG);
-                    }
-                    LOGGER.setLevel(Level.CONFIG);
-                }
-            }
-        });
-        bugfix.setVisible(false);
-        selection.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        list.setSelectionModel(selection);
-        list.setSelectionMode(JList.VERTICAL_WRAP);
-        list.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent lse) {
-                if (list.getSelectedValue() == null || pm) {
-                    return;
-                }
-                final String recip = list.getSelectedValue();
-                list.clearSelection();
-                pm = true;
-
-                QuickGUI.inputBox("ConvoSyncClient - Send PM", "Enter what you would like to send " + recip + ":", new InputOrCancelListener() {
-                    @Override
-                    public void onCancel() {
-                        pm = false;
-                    }
-
-                    @Override
-                    public void onInput(String input) {
-                        out(new PrivateMessage(recip, name, input, "CS-Client"));
-                        pm = false;
-                    }
-                }, false);
-            }
-        });
-        //model.addElement("SERVER");
-
-        frame.add(cpane);
-        frame.add(lpane);
-        frame.add(input);
-        frame.add(bugfix);
-        frame.setJMenuBar(mb);
-
-        frame.setVisible(true);
+        gui = new ConvoSyncGUI(this);
     }
 
-    private void log2(String s) {
-        console.setText(console.getText() + "\n[" + name + "] " + s);
+    protected void log2(String s) {
+        log1("[" + name + "] " + s);
     }
 
     private void log1(String s) {
-        console.setText(console.getText() + "\n" + s);
+        if (gui.useTimeStamps()) {
+            CAL.setTimeInMillis(System.currentTimeMillis());
+            StringBuilder sb = new StringBuilder();
+            String hour = String.valueOf(CAL.get(Calendar.HOUR_OF_DAY));
+            String minute = String.valueOf(CAL.get(Calendar.MINUTE));
+            String second = String.valueOf(CAL.get(Calendar.SECOND));
+            sb
+                    .append(hour.length() == 1 ? "0" : "")
+                    .append(hour)
+                    .append(minute.length() == 1 ? ":0" : ":")
+                    .append(minute)
+                    .append(second.length() == 1 ? ":0" : ":")
+                    .append(second)
+                    .append(" ");
+            s = sb.append(s).toString();
+        }
+
+        gui.log(s);
     }
 
-    private boolean reconnect() {
+    protected boolean reconnect() {
         disconnect();
         return connect();
     }
 
     private boolean connect() {
         try {
-            if (model != null) {
-                model.clear();
-            }
+            gui.clearUserList();
             //model.addElement("SERVER");
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
             socket = new Socket(ip, port);
@@ -429,7 +256,12 @@ public final class ConvoSyncClient {
                                 LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
                                 continue;
                             }
-                            if (console != null && input instanceof Message) {
+                            if (input instanceof Message) {
+                                if (input instanceof PrivateMessage) {
+                                    PrivateMessage pm = (PrivateMessage) input;
+                                    log1("[[" + pm.SERVER + "] " + pm.SENDER + "] -> me] " + pm.MSG);
+                                    continue;
+                                }
                                 if (input instanceof ChatMessage) {
                                     log1(format(((ChatMessage) input).MSG));
                                     continue;
@@ -438,11 +270,13 @@ public final class ConvoSyncClient {
                                     PlayerListMessage list = (PlayerListMessage) input;
                                     if (list.JOIN) {
                                         for (String elem : list.LIST) {
-                                            model.addElement(elem);
+                                            if (!elem.equals(name)) {
+                                                gui.addToUserList(elem);
+                                            }
                                         }
                                     } else {
                                         for (String elem : list.LIST) {
-                                            model.removeElement(elem);
+                                            gui.removeFromUserList(elem);
                                         }
                                     }
                                     continue;
@@ -450,22 +284,25 @@ public final class ConvoSyncClient {
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
                                     if (!auth) {
-                                        console.setText("Invalid user name or password.");
+                                        gui.setText("Invalid login.");
                                         name = null;
                                         password = null;
+                                        gui.setVisible(false);
+                                        disconnect();
                                         task3();
                                     }
                                     continue;
                                 }
                                 if (input instanceof DisconnectMessage) {
                                     log1("The server has disconnected you.");
+                                    disconnect();
                                     continue;
                                 }
                             }
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, null, ex);
                             connected = false;
-                            console.setText("Connection lost. Try to reconnect.");
+                            gui.setText("Connection lost. Try to reconnect.");
                             continue;
                         } catch (ClassNotFoundException ex) {
                             QuickGUI.errorBox("ConvoSyncClient - Error", "Fatal error: " + ex, ex.hashCode());
@@ -475,9 +312,7 @@ public final class ConvoSyncClient {
                 }
             }.start();
             LOGGER.log(Level.INFO, null, socket);
-            if (console != null) {
-                console.setText("");
-            }
+            gui.cls();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
             return false;
@@ -485,7 +320,7 @@ public final class ConvoSyncClient {
         return true;
     }
 
-    private void disconnect() {
+    protected void disconnect() {
         try {
             out(new DisconnectMessage());
             socket.close();
@@ -494,13 +329,13 @@ public final class ConvoSyncClient {
         }
     }
 
-    private void out(String s, boolean override) {
+    protected void out(String s, boolean override) {
         if (auth || override) {
             out(new ChatMessage(s, override));
         }
     }
 
-    private void out(Object obj) {
+    protected void out(Object obj) {
         try {
             out.writeObject(obj);
             out.flush();

@@ -1,0 +1,47 @@
+23:29:30 [INFO] September 13, 2013
+23:29:30 [INFO] ConvoSyncClient 1.0.3 Dev 1.11
+23:29:30 [CONFIG] Java Version: 1.7.0_25
+23:29:30 [CONFIG] OS Architexture: x86
+23:29:30 [CONFIG] OS Name: Windows 7
+23:29:30 [CONFIG] OS Version: 6.1
+23:29:48 [INFO] Connecting to minepop.servegame.com:1335...
+23:29:49 [INFO] 
+23:30:25 [SEVERE] 
+java.net.SocketException: socket closed
+	at java.net.SocketInputStream.socketRead0(Native Method)
+	at java.net.SocketInputStream.read(SocketInputStream.java:150)
+	at java.net.SocketInputStream.read(SocketInputStream.java:121)
+	at java.net.SocketInputStream.read(SocketInputStream.java:203)
+	at java.io.ObjectInputStream$PeekInputStream.peek(ObjectInputStream.java:2291)
+	at java.io.ObjectInputStream$BlockDataInputStream.peek(ObjectInputStream.java:2584)
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:2594)
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1316)
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:370)
+	at com.minepop.servegame.convosync.application.ConvoSyncClient$17.run(ConvoSyncClient.java:454)
+
+20:52:36 [INFO] September 14, 2013
+20:52:36 [INFO] ConvoSyncClient 1.0.3 Dev 1.11
+20:52:36 [CONFIG] Java Version: 1.7.0_25
+20:52:36 [CONFIG] OS Architexture: amd64
+20:52:36 [CONFIG] OS Name: Windows 7
+20:52:36 [CONFIG] OS Version: 6.1
+20:52:51 [INFO] Connecting to minepop.servegame.com:1335...
+20:52:51 [FINER] ApplicationAuthenticationRequest[random11714] sent!
+20:52:51 [INFO] 
+20:52:52 [FINER] Input: AuthenticationRequestResponse[true]
+20:52:52 [FINER] Input: PlayerListMessage[true]
+20:52:52 [FINER] Input: PlayerListMessage[true]
+20:53:31 [FINER] DisconnectMessage sent!
+20:53:31 [SEVERE] 
+java.net.SocketException: socket closed
+	at java.net.SocketInputStream.socketRead0(Native Method)
+	at java.net.SocketInputStream.read(SocketInputStream.java:150)
+	at java.net.SocketInputStream.read(SocketInputStream.java:121)
+	at java.net.SocketInputStream.read(SocketInputStream.java:203)
+	at java.io.ObjectInputStream$PeekInputStream.peek(ObjectInputStream.java:2291)
+	at java.io.ObjectInputStream$BlockDataInputStream.peek(ObjectInputStream.java:2584)
+	at java.io.ObjectInputStream$BlockDataInputStream.peekByte(ObjectInputStream.java:2594)
+	at java.io.ObjectInputStream.readObject0(ObjectInputStream.java:1316)
+	at java.io.ObjectInputStream.readObject(ObjectInputStream.java:370)
+	at com.minepop.servegame.convosync.application.ConvoSyncClient$7.run(ConvoSyncClient.java:253)
+
