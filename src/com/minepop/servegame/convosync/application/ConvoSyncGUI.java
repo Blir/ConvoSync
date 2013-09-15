@@ -117,7 +117,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         });
         jMenu1.add(jCheckBoxMenuItem2);
 
-        jCheckBoxMenuItem1.setSelected(true);
         jCheckBoxMenuItem1.setText("Use Time Stamps");
         jMenu1.add(jCheckBoxMenuItem1);
 

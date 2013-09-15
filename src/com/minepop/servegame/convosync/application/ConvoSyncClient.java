@@ -229,7 +229,7 @@ public final class ConvoSyncClient {
                                 if (input instanceof PrivateMessage) {
                                     PrivateMessage pm = (PrivateMessage) input;
                                     gui.log("[[" + pm.SERVER + "] " + pm.SENDER + "] -> me] " + pm.MSG);
-                                    out(new PlayerMessage("[[CS-Client] " + name + "] -> me] " + pm.MSG, pm.SENDER));
+                                    out(new PlayerMessage("[me -> [CS-Client] " + name + "]] " + pm.MSG, pm.SENDER));
                                     continue;
                                 }
                                 if (input instanceof PlayerMessage) {
@@ -237,7 +237,7 @@ public final class ConvoSyncClient {
                                     continue;
                                 }
                                 if (input instanceof ChatMessage) {
-                                    gui.logChat(((ChatMessage) input).MSG);
+                                    gui.log(((ChatMessage) input).MSG);
                                     continue;
                                 }
                                 if (input instanceof PlayerListMessage) {
