@@ -5,15 +5,10 @@ import blir.swing.listener.*;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
-import java.awt.Dimension;
-import java.awt.event.*;
 import java.io.*;
 import java.net.Socket;
-import java.util.Calendar;
 import java.util.logging.*;
-import javax.swing.*;
-import javax.swing.event.*;
-import javax.swing.text.DefaultCaret;
+import javax.swing.UnsupportedLookAndFeelException;
 
 /**
  *
@@ -29,7 +24,6 @@ public final class ConvoSyncClient {
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
-    private static final Calendar CAL = Calendar.getInstance();
 
     /**
      * @param args the command line arguments
@@ -203,31 +197,6 @@ public final class ConvoSyncClient {
         gui = new ConvoSyncGUI(this);
     }
 
-    protected void log2(String s) {
-        log1("[" + name + "] " + s);
-    }
-
-    private void log1(String s) {
-        if (gui.useTimeStamps()) {
-            CAL.setTimeInMillis(System.currentTimeMillis());
-            StringBuilder sb = new StringBuilder();
-            String hour = String.valueOf(CAL.get(Calendar.HOUR_OF_DAY));
-            String minute = String.valueOf(CAL.get(Calendar.MINUTE));
-            String second = String.valueOf(CAL.get(Calendar.SECOND));
-            sb
-                    .append(hour.length() == 1 ? "0" : "")
-                    .append(hour)
-                    .append(minute.length() == 1 ? ":0" : ":")
-                    .append(minute)
-                    .append(second.length() == 1 ? ":0" : ":")
-                    .append(second)
-                    .append(" ");
-            s = sb.append(s).toString();
-        }
-
-        gui.log(s);
-    }
-
     protected boolean reconnect() {
         disconnect();
         return connect();
@@ -259,11 +228,12 @@ public final class ConvoSyncClient {
                             if (input instanceof Message) {
                                 if (input instanceof PrivateMessage) {
                                     PrivateMessage pm = (PrivateMessage) input;
-                                    log1("[[" + pm.SERVER + "] " + pm.SENDER + "] -> me] " + pm.MSG);
+                                    gui.logChat("[[" + pm.SERVER + "] " + pm.SENDER + "] -> me] " + pm.MSG);
+                                    out(new PlayerMessage("[[CS-Client] " + name + "] -> me]", pm.SENDER));
                                     continue;
                                 }
                                 if (input instanceof ChatMessage) {
-                                    log1(format(((ChatMessage) input).MSG));
+                                    gui.logChat(format(((ChatMessage) input).MSG));
                                     continue;
                                 }
                                 if (input instanceof PlayerListMessage) {
@@ -284,17 +254,16 @@ public final class ConvoSyncClient {
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
                                     if (!auth) {
-                                        gui.setText("Invalid login.");
+                                        gui.setText("Invalid login. Make sure you're logged out of Minecraft, registered on the CS server, and check your user name and password.");
                                         name = null;
                                         password = null;
-                                        gui.setVisible(false);
                                         disconnect();
                                         task3();
                                     }
                                     continue;
                                 }
                                 if (input instanceof DisconnectMessage) {
-                                    log1("The server has disconnected you.");
+                                    gui.logChat("The server has disconnected you.");
                                     disconnect();
                                     continue;
                                 }

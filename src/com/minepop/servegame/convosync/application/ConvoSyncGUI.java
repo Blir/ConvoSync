@@ -1,8 +1,8 @@
 package com.minepop.servegame.convosync.application;
 
-import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.CommandMessage;
 import com.minepop.servegame.convosync.net.PrivateMessage;
+import java.util.Calendar;
 
 /**
  *
@@ -12,18 +12,19 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
     private ConvoSyncClient client;
     private javax.swing.DefaultListModel<String> model;
-    private int divider;
+    final Calendar CAL;
 
     /**
      * Creates new form ConvoSyncGUI
      */
     public ConvoSyncGUI(ConvoSyncClient client) {
-        super("ConvoSyncClient " + Main.VERSION);
+        super(client.toString());
         this.client = client;
         initComponents();
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
         ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
+        CAL = Calendar.getInstance();
     }
 
     /**
@@ -46,6 +47,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jMenu1 = new javax.swing.JMenu();
         jMenuItem1 = new javax.swing.JMenuItem();
         jMenuItem2 = new javax.swing.JMenuItem();
+        jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
         jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
         jMenuItem3 = new javax.swing.JMenuItem();
 
@@ -53,13 +55,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 ConvoSyncGUI.this.windowClosing(evt);
-            }
-        });
-        addHierarchyBoundsListener(new java.awt.event.HierarchyBoundsListener() {
-            public void ancestorMoved(java.awt.event.HierarchyEvent evt) {
-            }
-            public void ancestorResized(java.awt.event.HierarchyEvent evt) {
-                onAncestorResized(evt);
             }
         });
 
@@ -78,13 +73,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         userList.addListSelectionListener(new javax.swing.event.ListSelectionListener() {
             public void valueChanged(javax.swing.event.ListSelectionEvent evt) {
                 onUserListSelection(evt);
-            }
-        });
-        userList.addHierarchyBoundsListener(new java.awt.event.HierarchyBoundsListener() {
-            public void ancestorMoved(java.awt.event.HierarchyEvent evt) {
-            }
-            public void ancestorResized(java.awt.event.HierarchyEvent evt) {
-                OnUserListResized(evt);
             }
         });
         jScrollPane2.setViewportView(userList);
@@ -117,7 +105,17 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         });
         jMenu1.add(jMenuItem2);
 
-        jCheckBoxMenuItem1.setText("Use TimeStamps");
+        jCheckBoxMenuItem2.setSelected(true);
+        jCheckBoxMenuItem2.setText("Word Wrap");
+        jCheckBoxMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onToggleWordWrap(evt);
+            }
+        });
+        jMenu1.add(jCheckBoxMenuItem2);
+
+        jCheckBoxMenuItem1.setSelected(true);
+        jCheckBoxMenuItem1.setText("Use Time Stamps");
         jMenu1.add(jCheckBoxMenuItem1);
 
         jMenuItem3.setText("Refresh");
@@ -165,6 +163,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         if (client.pm) {
             jLabel1.setText("Press enter to send.");
             client.pm = false;
+            userList.clearSelection();
             if (client.auth) {
                 if (input.getText().equals("")) {
                     return;
@@ -217,17 +216,32 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
     private void OnRefresh(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OnRefresh
         userList.clearSelection();
+        client.pm = false;
+        jLabel1.setText("Press enter to send.");
     }//GEN-LAST:event_OnRefresh
 
-    private void onAncestorResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_onAncestorResized
-        jSplitPane1.setDividerLocation(jSplitPane1.getWidth() - divider);
-    }//GEN-LAST:event_onAncestorResized
-
-    private void OnUserListResized(java.awt.event.HierarchyEvent evt) {//GEN-FIRST:event_OnUserListResized
-        divider = userList.getWidth();
-    }//GEN-LAST:event_OnUserListResized
+    private void onToggleWordWrap(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onToggleWordWrap
+        output.setWrapStyleWord(jCheckBoxMenuItem2.getState());
+        output.setLineWrap(jCheckBoxMenuItem2.getState());
+    }//GEN-LAST:event_onToggleWordWrap
 
     public void log(String s) {
+        if (jCheckBoxMenuItem1.getState()) {
+            CAL.setTimeInMillis(System.currentTimeMillis());
+            StringBuilder sb = new StringBuilder();
+            String hour = String.valueOf(CAL.get(Calendar.HOUR_OF_DAY));
+            String minute = String.valueOf(CAL.get(Calendar.MINUTE));
+            String second = String.valueOf(CAL.get(Calendar.SECOND));
+            sb
+                    .append(hour.length() == 1 ? "0" : "")
+                    .append(hour)
+                    .append(minute.length() == 1 ? ":0" : ":")
+                    .append(minute)
+                    .append(second.length() == 1 ? ":0" : ":")
+                    .append(second)
+                    .append(" ");
+            s = sb.append(s).toString();
+        }
         output.setText(output.getText() + "\n" + s);
     }
 
@@ -261,6 +275,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JTextField input;
     private javax.swing.JCheckBoxMenuItem jCheckBoxMenuItem1;
+    private javax.swing.JCheckBoxMenuItem jCheckBoxMenuItem2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenuBar jMenuBar1;
