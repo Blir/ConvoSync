@@ -30,8 +30,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     private enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, REGISTER, SETMAXPLAYERS,
-        USERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, REGISTER, SETMAXPLAYERS
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -428,9 +427,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         if (input instanceof AuthenticationRequestResponse) {
                             auth = ((AuthenticationRequestResponse) input).AUTH;
                             getLogger().info(auth ? "Connection authenticated." : "Failed to authenticate with server.");
-                            if (auth) {
-                                getServer().broadcastMessage(ChatColor.GREEN + "Connected to the ConvoSync server.");
-                            }
                             continue;
                         }
                         if (input instanceof DisconnectMessage) {

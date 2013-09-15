@@ -19,17 +19,12 @@ public class ConvoSyncServer {
 
         EXIT, STOP, RESTART, SETCOLOR, SETUSEPREFIX, KICK, LIST, USERS, NAME, HELP, DEBUG
     }
-
-    private enum SubCommand {
-
-        LIST, OP
-    }
     private int port;
     private ServerSocket socket;
     private Scanner in;
     private boolean open = true, debug = false, prefix = true;
     private List<Client> clients = new ArrayList<Client>();
-    private String name = "ConvoSyncServer", pluginPassword;
+    private String name = "ConvoSyncServer", pluginPassword, applicationPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
     private List<User> users = new ArrayList<User>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
@@ -74,8 +69,9 @@ public class ConvoSyncServer {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
         } catch (ClassNotFoundException ignore) {
         }
+        Properties p = null;
         try {
-            Properties p = new Properties();
+            p = new Properties();
             FileInputStream fis = new FileInputStream(new File("CS-Server.properties"));
             p.load(fis);
             String prop = p.getProperty("chat-color");
@@ -84,22 +80,6 @@ public class ConvoSyncServer {
             prop = p.getProperty("use-prefixes");
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
-            prop = p.getProperty("name");
-            if (prop != null) {
-                name = prop;
-            }
-            prop = p.getProperty("port");
-            if (prop != null) {
-                try {
-                    port = Integer.parseInt(prop);
-                } catch (NumberFormatException ex) {
-                    LOGGER.log(Level.WARNING, "Invalid Port: {0}", prop);
-                }
-            }
-            prop = p.getProperty("plugin-password");
-            if (prop != null) {
-                pluginPassword = prop;
-            }
             fis.close();
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "Couldn't load config:", ex);
@@ -111,6 +91,8 @@ public class ConvoSyncServer {
                     port = Integer.parseInt(arg.split(":")[1]);
                 } else if (arg.startsWith("Name:")) {
                     name = arg.split(":")[1];
+                } else if (arg.startsWith("ApplicationPassword:")) {
+                    applicationPassword = arg.split(":")[1];
                 } else if (arg.startsWith("PluginPassword:")) {
                     pluginPassword = arg.split(":")[1];
                 }
@@ -118,6 +100,25 @@ public class ConvoSyncServer {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             } catch (ArrayIndexOutOfBoundsException ex) {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
+            }
+        }
+        if (p != null) {
+            String prop;
+            try {
+                port = Integer.parseInt(p.getProperty("port"));
+            } catch (NumberFormatException ignore) {
+            }
+            prop = p.getProperty("name");
+            if (prop != null) {
+                name = prop;
+            }
+            prop = p.getProperty("application-password");
+            if (prop != null) {
+                applicationPassword = prop;
+            }
+            prop = p.getProperty("plugin-password");
+            if (prop != null) {
+                pluginPassword = prop;
             }
         }
         while (port == 0) {
@@ -135,6 +136,10 @@ public class ConvoSyncServer {
         while (pluginPassword == null || pluginPassword.equals("")) {
             System.out.print("Enter a password that the ConvoSync plugins will use to connect: ");
             pluginPassword = in.nextLine();
+        }
+        while (applicationPassword == null || applicationPassword.equals("")) {
+            System.out.print("Enter a password that the ConvoSync application clients will use to connect: ");
+            applicationPassword = in.nextLine();
         }
         open();
         final ConvoSyncServer server = this;
@@ -275,15 +280,15 @@ public class ConvoSyncServer {
             return;
         }
         String clientName = userMap.get(msg.RECIPIENT);
+        if (clientName.equals("CS-Client")) {
+            clientName = msg.RECIPIENT;
+        }
         if (clientName == null && sender != null) {
             sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\"not found.", msg.SENDER));
             return;
         }
-        if ("CS-Client".equals(clientName)) {
-            clientName = msg.RECIPIENT;
-        }
         for (Client client : clients) {
-            if (client.localname.equals(clientName)) {
+            if (client.type == Client.ClientType.PLUGIN && client.localname.equals(clientName)) {
                 client.sendMsg(msg);
             }
         }
@@ -387,15 +392,7 @@ public class ConvoSyncServer {
                         continue;
                     }
                     if (input instanceof CommandMessage) {
-                        if (type == ClientType.APPLICATION) {
-                            if (server.getUser(name).op) {
-                                server.out((CommandMessage) input, this);
-                            } else {
-                                sendMsg(new PlayerMessage("You must be OP to send commands.", name));
-                            }
-                        } else {
-                            server.out((CommandMessage) input, this);
-                        }
+                        server.out((CommandMessage) input, this);
                         continue;
                     }
                     if (input instanceof PlayerListMessage) {
@@ -404,10 +401,8 @@ public class ConvoSyncServer {
                         if (msg.JOIN) {
                             for (String element : msg.LIST) {
                                 if (server.userMap.get(element) != null) {
-                                    server.out(new PlayerMessage("You cannot be logged into the client and the game simultaneously.", element), this);
-                                    Client client = server.getClient(element);
-                                    client.sendMsg(new DisconnectMessage(), true);
-                                    client.close();
+                                    server.out(new PlayerMessage(element, "You cannot be logged into the client and the game simultaneously."), this);
+                                    server.getClient(element).sendMsg(new DisconnectMessage(), true);
                                 }
                                 server.userMap.put(element, localname);
                             }
@@ -440,7 +435,7 @@ public class ConvoSyncServer {
                         type = ClientType.APPLICATION;
                         ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
                         User user = server.getUser(authReq.NAME);
-                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD) && server.userMap.get(authReq.NAME) == null;
+                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD) && server.userMap.get(name) == null;
                         sendMsg(new AuthenticationRequestResponse(auth));
                         if (auth) {
                             localname = (name = authReq.NAME);
@@ -641,46 +636,13 @@ public class ConvoSyncServer {
                 }
                 break;
             case USERS:
-                if (args.length > 0) {
-                    switch (SubCommand.valueOf(args[0].toUpperCase())) {
-                        case LIST:
-
-                            if (userMap.isEmpty()) {
-                                LOGGER.log(Level.INFO, "No known online users.");
-                            } else {
-                                LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
-                                for (String key : userMap.keySet()) {
-                                    LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
-                                }
-                            }
-                            if (users.isEmpty()) {
-                                LOGGER.log(Level.INFO, "No registered users.");
-                            } else {
-                                LOGGER.log(Level.INFO, "All registered users ({0}):", users.size());
-                                for (User user : users) {
-                                    LOGGER.log(Level.INFO, "User {0} OP: {1}", new Object[]{user.NAME, user.op});
-                                }
-                            }
-                            break;
-                        case OP:
-                            if (args.length > 1) {
-                                if (isUserRegistered(args[1])) {
-                                    User user = getUser(args[1]);
-                                    user.op = args.length > 2 ? Boolean.parseBoolean(args[2]) : !user.op;
-                                    LOGGER.log(Level.INFO, "User: {0} OP: {1}",
-                                            new Object[]{user.NAME,
-                                        (user.op = (args.length > 2
-                                        ? Boolean.parseBoolean(args[2]) : !user.op))});
-                                } else {
-                                    LOGGER.log(Level.INFO, "User \"{0}\" is not registered.", args[1]);
-                                }
-                            } else {
-                                LOGGER.log(Level.INFO, "/users op <user name>");
-                            }
-                            break;
-                    }
+                if (userMap.isEmpty()) {
+                    LOGGER.log(Level.INFO, "No known online users.");
                 } else {
-                    LOGGER.log(Level.INFO, "/users <list|op>");
+                    LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
+                    for (String key : userMap.keySet()) {
+                        LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
+                    }
                 }
                 break;
             case NAME:
@@ -725,7 +687,6 @@ public class ConvoSyncServer {
     private static class User implements Serializable {
 
         private final String NAME, PASSWORD;
-        private boolean op;
 
         public User(UserRegistration reg) {
             this.NAME = reg.USER;
