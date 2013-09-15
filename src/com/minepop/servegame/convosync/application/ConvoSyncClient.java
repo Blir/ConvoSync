@@ -49,7 +49,7 @@ public final class ConvoSyncClient {
         Formatter formatter = new CompactFormatter() {
             @Override
             public String format(LogRecord rec) {
-                return super.format(rec).replaceAll(COLOR_CHAR + "\\w", "");
+                return Main.format(super.format(rec));
             }
         };
         handler.setFormatter(formatter);
@@ -232,8 +232,12 @@ public final class ConvoSyncClient {
                                     out(new PlayerMessage("[[CS-Client] " + name + "] -> me]", pm.SENDER));
                                     continue;
                                 }
+                                if (input instanceof PlayerMessage) {
+                                    gui.log(((PlayerMessage) input).MSG);
+                                    continue;
+                                }
                                 if (input instanceof ChatMessage) {
-                                    gui.logChat(format(((ChatMessage) input).MSG));
+                                    gui.logChat(((ChatMessage) input).MSG);
                                     continue;
                                 }
                                 if (input instanceof PlayerListMessage) {
@@ -319,10 +323,5 @@ public final class ConvoSyncClient {
     @Override
     public String toString() {
         return "ConvoSyncClient " + Main.VERSION;
-    }
-    private static final char COLOR_CHAR = '\u00A7';
-
-    private static String format(String s) {
-        return s.replaceAll(COLOR_CHAR + "\\w", "");
     }
 }

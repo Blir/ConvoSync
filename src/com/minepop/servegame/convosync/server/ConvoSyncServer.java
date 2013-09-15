@@ -284,7 +284,7 @@ public class ConvoSyncServer {
             clientName = msg.RECIPIENT;
         }
         if (clientName == null && sender != null) {
-            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\"not found.", msg.SENDER));
+            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\" not found.", msg.SENDER));
             return;
         }
         for (Client client : clients) {

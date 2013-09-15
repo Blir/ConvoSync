@@ -1,5 +1,6 @@
 package com.minepop.servegame.convosync.application;
 
+import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.CommandMessage;
 import com.minepop.servegame.convosync.net.PrivateMessage;
 import java.util.Calendar;
@@ -25,6 +26,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         userList.setModel(model);
         ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
         CAL = Calendar.getInstance();
+        onToggleWordWrap(null);
     }
 
     /**
@@ -52,13 +54,14 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jMenuItem3 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+        setPreferredSize(new java.awt.Dimension(500, 400));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 ConvoSyncGUI.this.windowClosing(evt);
             }
         });
 
-        jSplitPane1.setDividerLocation(300);
+        jSplitPane1.setDividerLocation(275);
         jSplitPane1.setResizeWeight(1.0);
         jSplitPane1.setAlignmentY(131.0F);
 
@@ -141,14 +144,14 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jLabel1)
                         .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 380, Short.MAX_VALUE))
+                    .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 211, Short.MAX_VALUE)
+                .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 311, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel1)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -163,13 +166,13 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         if (client.pm) {
             jLabel1.setText("Press enter to send.");
             client.pm = false;
-            userList.clearSelection();
             if (client.auth) {
                 if (input.getText().equals("")) {
                     return;
                 }
                 client.out(new PrivateMessage(userList.getSelectedValue(), client.name, input.getText(), "CS-Client"));
             }
+            userList.clearSelection();
         } else if (client.auth) {
             if (input.getText().equals("")) {
                 return;
@@ -226,6 +229,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onToggleWordWrap
 
     public void log(String s) {
+        s = Main.format(s);
         if (jCheckBoxMenuItem1.getState()) {
             CAL.setTimeInMillis(System.currentTimeMillis());
             StringBuilder sb = new StringBuilder();
@@ -268,7 +272,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     public void cls() {
         input.setText("");
     }
-    
+
     public boolean useTimeStamps() {
         return jCheckBoxMenuItem1.getState();
     }
