@@ -6,12 +6,18 @@ package com.minepop.servegame.convosync.net;
  */
 public class AuthenticationRequestResponse extends Message {
 
-    public final boolean AUTH;
+    public enum Reason {
 
-    public AuthenticationRequestResponse(boolean auth) {
-        this.AUTH = auth;
+        INVALID_PASSWORD, INVALID_USER, LOGGED_IN
     }
-    
+    public final boolean AUTH;
+    public final Reason REASON;
+
+    public AuthenticationRequestResponse(boolean auth, Reason reason) {
+        this.AUTH = auth;
+        this.REASON = reason;
+    }
+
     @Override
     public String toString() {
         return "AuthenticationRequestResponse[" + AUTH + "]";

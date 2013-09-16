@@ -411,7 +411,7 @@ public class ConvoSyncServer {
                         localname = format(name);
                         type = ClientType.PLUGIN;
                         auth = authReq.PASSWORD.equals(server.pluginPassword);
-                        sendMsg(new AuthenticationRequestResponse(auth));
+                        sendMsg(new AuthenticationRequestResponse(auth, null));
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
@@ -425,10 +425,23 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof ApplicationAuthenticationRequest) {
                         type = ClientType.APPLICATION;
+                        AuthenticationRequestResponse.Reason reason = null;
                         ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
                         User user = server.getUser(authReq.NAME);
-                        auth = user != null && authReq.PASSWORD.equals(user.PASSWORD) && server.userMap.get(name) == null;
-                        sendMsg(new AuthenticationRequestResponse(auth));
+                        if (user == null) {
+                            reason = AuthenticationRequestResponse.Reason.INVALID_USER;
+                        } else {
+                            if (authReq.PASSWORD.equals(user.PASSWORD)) {
+                                if (server.userMap.get(name) == null) {
+                                    auth = true;
+                                } else {
+                                    reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
+                                }
+                            } else {
+                                reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
+                            }
+                        }
+                        sendMsg(new AuthenticationRequestResponse(auth, reason));
                         if (auth) {
                             localname = (name = authReq.NAME);
                             sendMsg(new PlayerListMessage(server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));

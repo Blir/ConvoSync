@@ -19,7 +19,8 @@ import javax.swing.UnsupportedLookAndFeelException;
 public final class ConvoSyncClient {
 
     private ConvoSyncGUI gui;
-    protected String ip, name, password;
+    protected String name;
+    private String ip, password;
     private int port;
     private Socket socket;
     protected boolean pm, connected, auth;
@@ -236,7 +237,17 @@ public final class ConvoSyncClient {
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
                                     if (!auth) {
-                                        gui.log("Invalid login. Make sure you're logged out of Minecraft, registered on the CS server, and check your user name and password.");
+                                        switch (((AuthenticationRequestResponse) input).REASON) {
+                                            case INVALID_USER:
+                                                gui.log("Invalid user name.");
+                                                break;
+                                            case INVALID_PASSWORD:
+                                                gui.log("Invalid password.");
+                                                break;
+                                            case LOGGED_IN:
+                                                gui.log("You're already logged in.");
+                                                break;
+                                        }
                                         name = null;
                                         password = null;
                                         disconnect();
