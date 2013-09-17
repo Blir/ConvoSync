@@ -427,6 +427,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         if (input instanceof AuthenticationRequestResponse) {
                             auth = ((AuthenticationRequestResponse) input).AUTH;
                             getLogger().info(auth ? "Connection authenticated." : "Failed to authenticate with server.");
+                            if (auth) {
+                                getServer().broadcastMessage(ChatColor.GREEN + "Now connected with the ConvoSync server.");
+                            }
                             continue;
                         }
                         if (input instanceof DisconnectMessage) {

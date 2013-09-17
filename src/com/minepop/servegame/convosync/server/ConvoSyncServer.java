@@ -416,7 +416,7 @@ public class ConvoSyncServer {
                         if (msg.JOIN) {
                             for (String element : msg.LIST) {
                                 if (server.userMap.get(element) != null) {
-                                    server.out(new PlayerMessage(element, "You cannot be logged into the client and the game simultaneously."), this);
+                                    server.out(new PlayerMessage("You cannot be logged into the client and the game simultaneously.", element), this);
                                     server.getClient(element).sendMsg(new DisconnectMessage(), true);
                                 }
                                 server.userMap.put(element, localname);
@@ -438,7 +438,7 @@ public class ConvoSyncServer {
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
-                                server.out(new PlayerMessage(element, "You cannot be logged into the client and the game simultaneously."), this);
+                                server.out(new PlayerMessage("You cannot be logged into the client and the game simultaneously.", element), this);
                                 server.getClient(element).sendMsg(new DisconnectMessage(), true);
                             }
                             server.userMap.put(element, localname);
@@ -681,7 +681,15 @@ public class ConvoSyncServer {
                     LOGGER.log(Level.INFO, "/users <list|op|unregister>");
                     break;
                 }
-                switch (SubCommand.valueOf(args[0].toUpperCase())) {
+                SubCommand subcmd;
+                try {
+                    subcmd = SubCommand.valueOf(args[0].toUpperCase());
+                } catch (IllegalArgumentException ex) {
+                    LOGGER.log(Level.INFO, "/users <list|op|unregister>");
+                    break;
+                }
+                LOGGER.log(Level.INFO, "Executing sub-command {0}", subcmd);
+                switch (subcmd) {
                     case LIST:
                         if (userMap.isEmpty()) {
                             LOGGER.log(Level.INFO, "No known online users.");
@@ -694,9 +702,9 @@ public class ConvoSyncServer {
                         if (users.isEmpty()) {
                             LOGGER.log(Level.INFO, "No registered client users.");
                         } else {
-                            LOGGER.log(Level.INFO, "All registered client users:");
+                            LOGGER.log(Level.INFO, "All registered client users ({0}):", users.size());
                             for (User user : users) {
-                                LOGGER.log(Level.INFO, "User: {0} OP: {0}", new Object[]{user.NAME, user.op});
+                                LOGGER.log(Level.INFO, "User: {0} OP: {1}", new Object[]{user.NAME, user.op});
                             }
                         }
                         break;
@@ -728,6 +736,7 @@ public class ConvoSyncServer {
                         }
                         users.remove(getUser(args[1]));
                         LOGGER.log(Level.INFO, "{0} unregistered.", args[1]);
+                        out(name + " has disconnected.", client);
                         break;
                 }
                 break;
@@ -743,7 +752,7 @@ public class ConvoSyncServer {
                         + "/setuseprefix [true|false]\n"
                         + "/kick <port> - Closes the socket on the specified port.\n"
                         + "/list - Lists all connected clients.\n"
-                        + "/users - Lists all known online users.\n"
+                        + "/users <list|op|register> - Used to manage clien users.\n"
                         + "/name [name] - Sets your name to the given name.\n"
                         + "/help - Prints all commands.\n"
                         + "/debug - Toggles debug mode.");
