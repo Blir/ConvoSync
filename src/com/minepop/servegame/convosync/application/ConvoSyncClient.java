@@ -161,7 +161,7 @@ public final class ConvoSyncClient {
         if (connect()) {
             gui.setVisible(true);
         } else {
-            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry.", new Runnable() {
+            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry. Close to exit.", new Runnable() {
                 @Override
                 public void run() {
                     ip = null;

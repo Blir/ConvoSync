@@ -21,6 +21,11 @@ public class ConvoSyncServer {
 
         EXIT, STOP, RESTART, SETCOLOR, SETUSEPREFIX, KICK, LIST, USERS, NAME, HELP, DEBUG
     }
+
+    private enum SubCommand {
+
+        OP, LIST, UNREGISTER
+    }
     private int port;
     private ServerSocket socket;
     private Scanner in;
@@ -29,6 +34,7 @@ public class ConvoSyncServer {
     private String name = "ConvoSyncServer", pluginPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
     private List<User> users = new ArrayList<User>();
+    private List<String> banlist = new ArrayList<String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
     private char chatColor;
 
@@ -70,6 +76,15 @@ public class ConvoSyncServer {
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
         } catch (ClassNotFoundException ignore) {
+        }
+        try {
+            Scanner scanner = new Scanner(new File("banlist.txt"));
+            while (scanner.hasNext()) {
+                banlist.add(scanner.nextLine());
+            }
+            scanner.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error loading ban list.", ex);
         }
         Properties p = null;
         try {
@@ -384,7 +399,15 @@ public class ConvoSyncServer {
                         continue;
                     }
                     if (input instanceof CommandMessage) {
-                        server.out((CommandMessage) input, this);
+                        if (type == ClientType.APPLICATION) {
+                            if (server.getUser(name).op) {
+                                server.out((CommandMessage) input, this);
+                            } else {
+                                sendMsg(new PlayerMessage("You don't have permission to use cross-server commands.", name));
+                            }
+                        } else {
+                            server.out((CommandMessage) input, this);
+                        }
                         continue;
                     }
                     if (input instanceof PlayerListMessage) {
@@ -568,6 +591,15 @@ public class ConvoSyncServer {
                     LOGGER.log(Level.SEVERE, "Error saving user data.", ex);
                 }
                 try {
+                    PrintWriter pw = new PrintWriter("banlist.txt");
+                    for (String elem : banlist) {
+                        pw.println(elem);
+                    }
+                    pw.close();
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, "Error saving ban list.", ex);
+                }
+                try {
                     Properties p = new Properties();
                     FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
                     p.setProperty("chat-color", Character.toString(chatColor));
@@ -641,13 +673,50 @@ public class ConvoSyncServer {
                 }
                 break;
             case USERS:
-                if (userMap.isEmpty()) {
-                    LOGGER.log(Level.INFO, "No known online users.");
-                } else {
-                    LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
-                    for (String key : userMap.keySet()) {
-                        LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
-                    }
+                if (args.length < 0) {
+                    LOGGER.log(Level.INFO, "/users <list|op|unregister>");
+                    break;
+                }
+                switch (SubCommand.valueOf(args[0].toUpperCase())) {
+                    case LIST:
+                        if (userMap.isEmpty()) {
+                            LOGGER.log(Level.INFO, "No known online users.");
+                        } else {
+                            LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
+                            for (String key : userMap.keySet()) {
+                                LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
+                            }
+                        }
+                        break;
+                    case OP:
+                        if (args.length < 1) {
+                            LOGGER.log(Level.INFO, "/users op <user name> [true|false]");
+                            break;
+                        }
+                        if (!isUserRegistered(args[1])) {
+                            LOGGER.log(Level.INFO, "Invalid user name.");
+                            break;
+                        }
+                        User user = getUser(args[1]);
+                        LOGGER.log(Level.INFO, (user.op = (args.length > 2 ? Boolean.parseBoolean(args[2]) : !user.op)) ? "{0} is now OP." : "{0} is no longer OP.", user.NAME);
+                        break;
+                    case UNREGISTER:
+                        if (args.length < 1) {
+                            LOGGER.log(Level.INFO, "/users unregister <user name>");
+                            break;
+                        }
+                        Client client = getClient(args[1]);
+                        if (client != null) {
+                            client.sendMsg(new DisconnectMessage());
+                            try {
+                                client.close();
+                            } catch (IOException ex) {
+                                LOGGER.log(Level.INFO, "Error closing client.", ex);
+                            }
+                        }
+                        users.remove(getUser(args[1]));
+                        LOGGER.log(Level.INFO, "{0} unregistered.", args[1]);
+                        break;
                 }
                 break;
             case NAME:
@@ -668,7 +737,7 @@ public class ConvoSyncServer {
                         + "/debug - Toggles debug mode.");
                 break;
             case DEBUG:
-                LOGGER.log(Level.INFO, "Debug mode {0}.", (debug = !debug) ? "enabled" : "disabled");
+                LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled." : "Debug mode disabled.");
                 if (debug) {
                     for (Handler handler : LOGGER.getHandlers()) {
                         handler.setLevel(Level.FINEST);
@@ -686,7 +755,9 @@ public class ConvoSyncServer {
 
     private static class User implements Serializable {
 
+        private static final long serialVersionUID = 7526472295622776147L;
         private final String NAME, PASSWORD;
+        private boolean op;
 
         public User(UserRegistration reg) {
             this.NAME = reg.USER;
