@@ -15,7 +15,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.3 Dev 3.2";
+    public static final String VERSION = "1.0.3 Dev 3.3";
 
     public static enum Action {
 
@@ -42,14 +42,15 @@ public class Main {
                         return;
                 }
             } catch (IllegalArgumentException ignore) {
-                // ignore - probably an argument used by the server or gui client
-            }
+            } // ignore - probably an argument used by the server or gui client
         }
         prompt(args);
     }
 
     private static void prompt(final String[] args) {
-        new InputBox("ConvoSync - What do you wish to do?", "Enter \"server\" to run the server. Enter \"application\" to run the application.", new InputListener() {
+        new InputBox("ConvoSync - What do you wish to do?", "Enter \"server\""
+                + "to run the server. Enter \"application\" to run the application.",
+                new InputListener() {
             @Override
             public void onInput(final String input) {
                 try {

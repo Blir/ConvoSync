@@ -94,7 +94,8 @@ public final class ConvoSyncClient {
 
     private void task1() {
         if (ip == null) {
-            new InputBox("ConvoSyncClient - Enter IP", "Enter the IP of the server:", "127.0.0.1", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter IP", "Enter the IP of the server:",
+                    "127.0.0.1", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     ip = input;
@@ -108,7 +109,8 @@ public final class ConvoSyncClient {
 
     private void task2() {
         if (port == 0) {
-            new InputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:", "25000", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:",
+                    "25000", new InputListener() {
                 @Override
                 public void onInput(String input) {
                     try {
@@ -131,7 +133,8 @@ public final class ConvoSyncClient {
 
     private void task3() {
         if (name == null) {
-            new InputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:",
+                    new InputListener() {
                 @Override
                 public void onInput(final String input) {
                     name = input;
@@ -145,7 +148,8 @@ public final class ConvoSyncClient {
 
     private void task4() {
         if (password == null) {
-            new InputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:", new InputListener() {
+            new InputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:",
+                    new InputListener() {
                 @Override
                 public void onInput(String input) {
                     password = input;
@@ -161,7 +165,8 @@ public final class ConvoSyncClient {
         if (connect()) {
             gui.setVisible(true);
         } else {
-            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry. Close to exit.", new Runnable() {
+            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry. Close to exit.",
+                    new Runnable() {
                 @Override
                 public void run() {
                     ip = null;
@@ -236,7 +241,9 @@ public final class ConvoSyncClient {
                                 }
                                 if (input instanceof AuthenticationRequestResponse) {
                                     auth = ((AuthenticationRequestResponse) input).AUTH;
-                                    if (!auth) {
+                                    if (auth) {
+                                        gui.log("Connected.");
+                                    } else {
                                         switch (((AuthenticationRequestResponse) input).REASON) {
                                             case INVALID_USER:
                                                 gui.log("Invalid user name.");
@@ -264,11 +271,11 @@ public final class ConvoSyncClient {
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, null, ex);
                             connected = false;
-                            gui.log("Connection lost. Try to reconnect.");
+                            gui.log("Connection lost.");
                             continue;
                         } catch (ClassNotFoundException ex) {
+                            LOGGER.log(Level.SEVERE, "Fatal error.", ex);
                             System.exit(-1);
-                            connected = false;
                         }
                     }
                 }
