@@ -455,10 +455,14 @@ public class ConvoSyncServer {
                             reason = AuthenticationRequestResponse.Reason.INVALID_USER;
                         } else {
                             if (authReq.PASSWORD.equals(user.PASSWORD)) {
-                                if (server.userMap.get(name) == null) {
-                                    auth = true;
+                                if (server.banlist.contains(authReq.NAME)) {
+                                    reason = AuthenticationRequestResponse.Reason.BANNED;
                                 } else {
-                                    reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
+                                    if (server.userMap.get(authReq.NAME) == null) {
+                                        auth = true;
+                                    } else {
+                                        reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
+                                    }
                                 }
                             } else {
                                 reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
@@ -673,7 +677,7 @@ public class ConvoSyncServer {
                 }
                 break;
             case USERS:
-                if (args.length < 0) {
+                if (args.length < 1) {
                     LOGGER.log(Level.INFO, "/users <list|op|unregister>");
                     break;
                 }
@@ -685,6 +689,14 @@ public class ConvoSyncServer {
                             LOGGER.log(Level.INFO, "All known online users ({0}):", userMap.size());
                             for (String key : userMap.keySet()) {
                                 LOGGER.log(Level.INFO, "User {0} on server {1}", new String[]{key, userMap.get(key)});
+                            }
+                        }
+                        if (users.isEmpty()) {
+                            LOGGER.log(Level.INFO, "No registered client users.");
+                        } else {
+                            LOGGER.log(Level.INFO, "All registered client users:");
+                            for (User user : users) {
+                                LOGGER.log(Level.INFO, "User: {0} OP: {0}", new Object[]{user.NAME, user.op});
                             }
                         }
                         break;

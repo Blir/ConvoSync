@@ -8,7 +8,7 @@ public class AuthenticationRequestResponse extends Message {
 
     public enum Reason {
 
-        INVALID_PASSWORD, INVALID_USER, LOGGED_IN
+        INVALID_PASSWORD, INVALID_USER, BANNED, LOGGED_IN
     }
     public final boolean AUTH;
     public final Reason REASON;
