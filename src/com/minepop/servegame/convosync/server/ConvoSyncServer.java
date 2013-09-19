@@ -47,7 +47,7 @@ public class ConvoSyncServer {
     private static Handler consoleHandler, fileHandler;
     private char chatColor;
     private QuickCipher cipher;
-    private String[] args;
+    private String[] startupArgs;
 
     /**
      * @param args the command line arguments
@@ -73,7 +73,7 @@ public class ConvoSyncServer {
     }
 
     public void run(String[] startupArgs) throws IOException {
-        args = startupArgs;
+        this.startupArgs = startupArgs;
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
                 .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
@@ -693,7 +693,7 @@ public class ConvoSyncServer {
             case RESTART:
                 dispatchCommand(Command.EXIT, null);
                 try {
-                    new ConvoSyncServer().run(args == null ? this.args : args);
+                    new ConvoSyncServer().run(args.length == 0 ? startupArgs : args);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error restarting server.", ex);
                 }
