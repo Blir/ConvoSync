@@ -44,18 +44,15 @@ public class ConvoSyncServer {
     private List<User> users = new ArrayList<User>();
     private List<String> banlist = new ArrayList<String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
-    private Handler consoleHandler, fileHandler;
+    private static Handler consoleHandler, fileHandler;
     private char chatColor;
     private QuickCipher cipher;
+    private String[] args;
 
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) throws IOException {
-        new ConvoSyncServer().run(args);
-    }
-
-    public void run(String[] startupArgs) throws IOException {
         consoleHandler = new ConsoleHandler();
         java.util.logging.Formatter formatter = new CompactFormatter() {
             @Override
@@ -72,6 +69,11 @@ public class ConvoSyncServer {
         LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
+        new ConvoSyncServer().run(args);
+    }
+
+    public void run(String[] startupArgs) throws IOException {
+        args = startupArgs;
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
                 .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
@@ -691,7 +693,7 @@ public class ConvoSyncServer {
             case RESTART:
                 dispatchCommand(Command.EXIT, null);
                 try {
-                    new ConvoSyncServer().run(args);
+                    new ConvoSyncServer().run(args == null ? this.args : args);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error restarting server.", ex);
                 }

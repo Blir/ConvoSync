@@ -77,7 +77,7 @@ public class SelectionGUI extends javax.swing.JFrame {
 
     private void onLaunchServer(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLaunchServer
         try {
-            new ConvoSyncServer().run(args);
+            ConvoSyncServer.main(args);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
         }
