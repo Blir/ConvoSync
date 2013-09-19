@@ -240,7 +240,11 @@ public final class ConvoSyncClient {
                                     continue;
                                 }
                                 if (input instanceof AuthenticationRequestResponse) {
-                                    auth = ((AuthenticationRequestResponse) input).AUTH;
+                                    AuthenticationRequestResponse response = (AuthenticationRequestResponse) input;
+                                    auth = response.AUTH;
+                                    if (!Main.VERSION.equals(response.VERSION)) {
+                                        gui.log("Version mismatch: Local version " + Main.VERSION + ", Convosync server version " + response.VERSION);
+                                    }
                                     if (auth) {
                                         gui.log("Connected.");
                                     } else {

@@ -250,6 +250,12 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         output.setText(output.getText() + "\n" + s);
     }
 
+    public void log(String s, Object... objects) {
+        for (int idx = 0; idx < objects.length; idx++) {
+            s = s.replace("{" + idx + "}", String.valueOf(objects[idx]));
+        }
+    }
+
     public void logChat(String s) {
         log("[" + client.name + "] " + s);
     }

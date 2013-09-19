@@ -12,14 +12,16 @@ public class AuthenticationRequestResponse extends Message {
     }
     public final boolean AUTH;
     public final Reason REASON;
+    public final String VERSION;
 
-    public AuthenticationRequestResponse(boolean auth, Reason reason) {
+    public AuthenticationRequestResponse(boolean auth, Reason reason, String version) {
         this.AUTH = auth;
         this.REASON = reason;
+        this.VERSION = version;
     }
 
     @Override
     public String toString() {
-        return "AuthenticationRequestResponse[" + AUTH + "]";
+        return "AuthenticationRequestResponse[" + AUTH + "," + VERSION + "]";
     }
 }

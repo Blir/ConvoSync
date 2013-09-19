@@ -26,7 +26,8 @@ public class ConvoSyncServer {
 
     private enum Command {
 
-        EXIT, STOP, RESTART, SETCOLOR, SETUSEPREFIX, KICK, LIST, USERS, NAME, HELP, DEBUG
+        EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
+        USERS, NAME, HELP, DEBUG
     }
 
     private enum SubCommand {
@@ -474,8 +475,11 @@ public class ConvoSyncServer {
                         localname = format(name);
                         type = ClientType.PLUGIN;
                         version = authReq.VERSION;
+                        if (!Main.VERSION.equals(version)) {
+                            LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, localname, version});
+                        }
                         auth = authReq.PASSWORD.equals(server.pluginPassword);
-                        sendMsg(new AuthenticationRequestResponse(auth, null));
+                        sendMsg(new AuthenticationRequestResponse(auth, AuthenticationRequestResponse.Reason.INVALID_PASSWORD, Main.VERSION));
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
@@ -493,6 +497,9 @@ public class ConvoSyncServer {
                         AuthenticationRequestResponse.Reason reason = null;
                         ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
                         version = authReq.VERSION;
+                        if (!Main.VERSION.equals(version)) {
+                            LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, authReq.NAME, version});
+                        }
                         User user = server.getUser(authReq.NAME);
                         if (user == null) {
                             reason = AuthenticationRequestResponse.Reason.INVALID_USER;
@@ -511,7 +518,7 @@ public class ConvoSyncServer {
                                 reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
                             }
                         }
-                        sendMsg(new AuthenticationRequestResponse(auth, reason));
+                        sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION));
                         if (auth) {
                             localname = (name = authReq.NAME);
                             sendMsg(new PlayerListMessage(
@@ -676,12 +683,20 @@ public class ConvoSyncServer {
                     LOGGER.log(Level.WARNING, "Error saving config.", ex);
                 }
                 try {
-                    close(args.length > 0 && args[0].equalsIgnoreCase("force"));
+                    close(args != null && args.length > 0 && args[0].equalsIgnoreCase("force"));
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
                 break;
             case RESTART:
+                dispatchCommand(Command.EXIT, null);
+                try {
+                    new ConvoSyncServer().run(args);
+                } catch (IOException ex) {
+                    LOGGER.log(Level.SEVERE, "Error restarting server.", ex);
+                }
+                break;
+            case RECONNECT:
                 try {
                     restart();
                 } catch (IOException ex) {
@@ -814,7 +829,8 @@ public class ConvoSyncServer {
                 LOGGER.log(Level.INFO, "Commands:\n"
                         + "/exit [force]              - Closes the socket and exits the program.\n"
                         + "/stop [force]              - Same as /exit.\n"
-                        + "/restart                   - Closes the socket and then reopens it.\n"
+                        + "/restart                   - Completely restarts the server.\n"
+                        + "/reconnect                 - Closes the socket and then reopens it.\n"
                         + "/setcolor [color code]     - Sets the color code used for server & client name prefixes.\n"
                         + "/setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
                         + "/kick <port>               - Closes the socket on the specified port.\n"

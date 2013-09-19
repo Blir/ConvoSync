@@ -477,15 +477,24 @@ public class ConvoSync extends JavaPlugin implements Listener {
                             continue;
                         }
                         if (input instanceof AuthenticationRequestResponse) {
-                            auth = ((AuthenticationRequestResponse) input).AUTH;
-                            getLogger().info(auth ? "Connection authenticated." : "Failed to authenticate with server.");
+                            AuthenticationRequestResponse response = (AuthenticationRequestResponse) input;
+                            auth = response.AUTH;
+                            getLogger().info(auth ? "Connection authenticated."
+                                    : "Failed to authenticate with server.");
+                            if (!Main.VERSION.equals(response.VERSION)) {
+                                getLogger().log(Level.WARNING, "Version mismatch:"
+                                        + "Local version {0}, ConvoSyncs server version {1}",
+                                        new Object[]{Main.VERSION, response.VERSION});
+                            }
                             if (auth) {
-                                getServer().broadcastMessage(ChatColor.GREEN + "Now connected to the ConvoSync server.");
+                                getServer().broadcastMessage(ChatColor.GREEN
+                                        + "Now connected to the ConvoSync server.");
                             }
                             continue;
                         }
                         if (input instanceof DisconnectMessage) {
-                            getServer().broadcastMessage(ChatColor.RED + "The ConvoSync server has disconnected this server.");
+                            getServer().broadcastMessage(ChatColor.RED
+                                    + "The ConvoSync server has disconnected this server.");
                             connected = false;
                             shouldBe = false;
                             auth = false;
