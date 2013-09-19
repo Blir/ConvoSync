@@ -15,7 +15,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.3 Dev 3.3";
+    public static final String VERSION = "1.0.3 Dev 3.4";
 
     public static enum Action {
 
@@ -44,44 +44,7 @@ public class Main {
             } catch (IllegalArgumentException ignore) {
             } // ignore - probably an argument used by the server or gui client
         }
-        prompt(args);
-    }
-
-    private static void prompt(final String[] args) {
-        new InputBox("ConvoSync - What do you wish to do?", "Enter \"server\""
-                + "to run the server. Enter \"application\" to run the application.",
-                new InputListener() {
-            @Override
-            public void onInput(final String input) {
-                try {
-                    switch (Action.valueOf(input.toUpperCase())) {
-                        case SERVER:
-                            try {
-                                new ConvoSyncServer().run(args);
-                            } catch (IOException ex) {
-                                ex.printStackTrace();
-                                System.exit(-291);
-                            }
-                            break;
-                        case APPLICATION:
-                            try {
-                                new ConvoSyncClient().run(args);
-                            } catch (IOException ex) {
-                                ex.printStackTrace();
-                                System.exit(-291);
-                            }
-                            break;
-                    }
-                } catch (IllegalArgumentException ex) {
-                    new MsgBox("ConvoSync - Warning", "\"" + input + "\" was an invalid selection. Please type \"server\" or \"application\".", new Runnable() {
-                        @Override
-                        public void run() {
-                            prompt(args);
-                        }
-                    }, true).setVisible(true);
-                }
-            }
-        }, true).setVisible(true);
+        new SelectionGUI(args).setVisible(true);
     }
     public static final char COLOR_CHAR = '\u00A7';
 

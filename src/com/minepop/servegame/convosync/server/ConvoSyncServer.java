@@ -1,5 +1,6 @@
 package com.minepop.servegame.convosync.server;
 
+import blir.crypto.QuickCipher;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
@@ -10,6 +11,12 @@ import java.util.*;
 import java.util.logging.*;
 import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
 import static com.minepop.servegame.convosync.Main.format;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  *
@@ -37,6 +44,7 @@ public class ConvoSyncServer {
     private List<String> banlist = new ArrayList<String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
     private char chatColor;
+    private QuickCipher cipher;
 
     /**
      * @param args the command line arguments
@@ -69,13 +77,34 @@ public class ConvoSyncServer {
         LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
         LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
+        File decrypted = new File("users.sav");
+        ObjectInputStream ois = null;
         try {
-            ObjectInputStream ois = new ObjectInputStream(new FileInputStream(new File("users.sav")));
+            cipher = new QuickCipher("DES/ECB/PKCS5Padding", "DES");
+            cipher.decrypt(new File("users.sav.dat"), decrypted, new File("key.dat"));
+            ois = new ObjectInputStream(new FileInputStream(decrypted));
             users.addAll(Arrays.asList((User[]) ois.readObject()));
-            ois.close();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
-        } catch (ClassNotFoundException ignore) {
+        } catch (ClassNotFoundException ex) {
+            LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
+        } catch (NoSuchAlgorithmException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } catch (NoSuchPaddingException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } catch (InvalidKeyException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } catch (IllegalBlockSizeException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } catch (BadPaddingException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } catch (InvalidKeySpecException ex) {
+            LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
+        } finally {
+            if (ois != null) {
+                ois.close();
+            }
+            decrypted.delete();
         }
         try {
             Scanner scanner = new Scanner(new File("banlist.txt"));
@@ -589,12 +618,33 @@ public class ConvoSyncServer {
             case EXIT:
             case STOP:
                 open = false;
+                File decrypted = null;
                 try {
-                    ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(new File("users.sav")));
-                    oos.writeObject(users.toArray(new User[users.size()]));
-                    oos.close();
+                    ObjectOutputStream oos = null;
+                    try {
+                        decrypted = new File("users.sav");
+                        oos = new ObjectOutputStream(new FileOutputStream(decrypted));
+                        oos.writeObject(users.toArray(new User[users.size()]));
+                    } finally {
+                        if (oos != null) {
+                            oos.close();
+                        }
+                    }
+                    if (cipher != null) {
+                        cipher.encrypt(decrypted, new File("users.sav.dat"), new File("key.dat"));
+                    }
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error saving user data.", ex);
+                } catch (InvalidKeyException ex) {
+                    LOGGER.log(Level.SEVERE, "Error encrypting user data.", ex);
+                } catch (IllegalBlockSizeException ex) {
+                    LOGGER.log(Level.SEVERE, "Error encrypting user data.", ex);
+                } catch (BadPaddingException ex) {
+                    LOGGER.log(Level.SEVERE, "Error encrypting user data.", ex);
+                } finally {
+                    if (decrypted != null) {
+                        decrypted.delete();
+                    }
                 }
                 try {
                     PrintWriter pw = new PrintWriter("banlist.txt");
