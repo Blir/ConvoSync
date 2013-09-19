@@ -8,6 +8,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -309,12 +310,16 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         + "You must be a player to use this command!");
                 return true;
             }
-            if (args.length < 2 || !args[0].equals(args[1])) {
-                sender.sendMessage(ChatColor.RED
-                        + "/csregister <password> <confirm password>");
-                return true;
+            Random rng = new Random();
+            StringBuilder sb = new StringBuilder(
+                    new String[]{"poptarts", "fedora", "oops", "potato"}[rng.nextInt(4)]);
+            int length = rng.nextInt(10);
+            for (int idx = 0; idx < length; idx++) {
+                sb.append((char) (rng.nextInt(93) + 33));
             }
-            out(new UserRegistration(sender.getName(), args[1]), false);
+            out(new UserRegistration(sender.getName(), sb.toString()), false);
+            sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
+                    + ChatColor.BLUE + sb.toString() + ChatColor.GREEN + "\"");
             return true;
         }
         return false;

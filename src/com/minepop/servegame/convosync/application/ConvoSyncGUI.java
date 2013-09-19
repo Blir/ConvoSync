@@ -1,8 +1,10 @@
 package com.minepop.servegame.convosync.application;
 
+import blir.swing.listener.NewPasswordListener;
+import blir.swing.quickgui.MsgBox;
+import blir.swing.quickgui.NewPasswordBox;
 import com.minepop.servegame.convosync.Main;
-import com.minepop.servegame.convosync.net.CommandMessage;
-import com.minepop.servegame.convosync.net.PrivateMessage;
+import com.minepop.servegame.convosync.net.*;
 import java.util.Calendar;
 
 /**
@@ -53,9 +55,10 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
         jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
         jMenuItem3 = new javax.swing.JMenuItem();
+        jMenu2 = new javax.swing.JMenu();
+        jMenuItem4 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setPreferredSize(new java.awt.Dimension(500, 400));
         addWindowListener(new java.awt.event.WindowAdapter() {
             public void windowClosing(java.awt.event.WindowEvent evt) {
                 ConvoSyncGUI.this.windowClosing(evt);
@@ -130,6 +133,18 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jMenu1.add(jMenuItem3);
 
         jMenuBar1.add(jMenu1);
+
+        jMenu2.setText("Account");
+
+        jMenuItem4.setText("Change Password");
+        jMenuItem4.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onPasswordChangeRequest(evt);
+            }
+        });
+        jMenu2.add(jMenuItem4);
+
+        jMenuBar1.add(jMenu2);
 
         setJMenuBar(jMenuBar1);
 
@@ -229,6 +244,24 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         output.setLineWrap(jCheckBoxMenuItem2.getState());
     }//GEN-LAST:event_onToggleWordWrap
 
+    private void onPasswordChangeRequest(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onPasswordChangeRequest
+        new NewPasswordBox("ConvoSyncClient - New Password", "", new NewPasswordListener() {
+            @Override
+            public void onInput(String input) {
+                client.out(new UserPropertyChange(UserPropertyChange.Property.PASSWORD, input));
+            }
+
+            @Override
+            public void onCancel() {
+            }
+
+            @Override
+            public void onPasswordMismatch() {
+                new MsgBox("ConvoSyncClient - Warning", "The passwords you entered did not match.", false).setVisible(true);
+            }
+        }).setVisible(true);
+    }//GEN-LAST:event_onPasswordChangeRequest
+
     public void log(String s) {
         s = Main.format(s);
         if (jCheckBoxMenuItem1.getState()) {
@@ -289,10 +322,12 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JCheckBoxMenuItem jCheckBoxMenuItem2;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JMenu jMenu1;
+    private javax.swing.JMenu jMenu2;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
+    private javax.swing.JMenuItem jMenuItem4;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;

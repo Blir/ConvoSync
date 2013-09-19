@@ -4,6 +4,7 @@ import blir.swing.QuickGUI;
 import blir.swing.listener.*;
 import blir.swing.quickgui.InputBox;
 import blir.swing.quickgui.MsgBox;
+import blir.swing.quickgui.PasswordBox;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
@@ -88,97 +89,8 @@ public final class ConvoSyncClient {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             }
         }
-        setup();
-        task1();
-    }
-
-    private void task1() {
-        if (ip == null) {
-            new InputBox("ConvoSyncClient - Enter IP", "Enter the IP of the server:",
-                    "127.0.0.1", new InputListener() {
-                @Override
-                public void onInput(String input) {
-                    ip = input;
-                    task2();
-                }
-            }, true).setVisible(true);
-        } else {
-            task2();
-        }
-    }
-
-    private void task2() {
-        if (port == 0) {
-            new InputBox("ConvoSyncClient - Enter Port", "Enter the port the server listens to:",
-                    "25000", new InputListener() {
-                @Override
-                public void onInput(String input) {
-                    try {
-                        port = Integer.parseInt(input);
-                        task3();
-                    } catch (NumberFormatException ex) {
-                        new MsgBox("ConvoSyncClient - Error", "\"" + input + "\" is not a valid port.", new Runnable() {
-                            @Override
-                            public void run() {
-                                task2();
-                            }
-                        }, true).setVisible(true);
-                    }
-                }
-            }, true).setVisible(true);
-        } else {
-            task3();
-        }
-    }
-
-    private void task3() {
-        if (name == null) {
-            new InputBox("ConvoSyncClient - Enter User Name", "Enter your MC user name:",
-                    new InputListener() {
-                @Override
-                public void onInput(final String input) {
-                    name = input;
-                    task4();
-                }
-            }, true).setVisible(true);
-        } else {
-            task4();
-        }
-    }
-
-    private void task4() {
-        if (password == null) {
-            new InputBox("ConvoSyncClient - Enter CS Password", "Enter your ConvoSync password:",
-                    new InputListener() {
-                @Override
-                public void onInput(String input) {
-                    password = input;
-                    task5();
-                }
-            }, true).setVisible(true);
-        } else {
-            task5();
-        }
-    }
-
-    private void task5() {
-        if (connect()) {
-            gui.setVisible(true);
-        } else {
-            new MsgBox("ConvoSyncClient - Warning", "Can't reach server. Press OK to retry. Close to exit.",
-                    new Runnable() {
-                @Override
-                public void run() {
-                    ip = null;
-                    port = 0;
-                    task1();
-                }
-            }, true).setVisible(true);
-        }
-    }
-
-    private void setup() {
         gui = new ConvoSyncGUI(this);
+        new LoginGUI(this).setVisible(true);
     }
 
     protected boolean reconnect() {
@@ -186,6 +98,13 @@ public final class ConvoSyncClient {
         return connect();
     }
 
+    protected boolean connect(String ip, int port, String password) {
+        this.ip = ip;
+        this.port = port;
+        this.password = password;
+        return connect();
+    }
+    
     private boolean connect() {
         try {
             gui.clearUserList();
@@ -197,6 +116,7 @@ public final class ConvoSyncClient {
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
             out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
+            final ConvoSyncClient client = this;
             new Thread() {
                 @Override
                 public void run() {
@@ -262,7 +182,7 @@ public final class ConvoSyncClient {
                                         name = null;
                                         password = null;
                                         disconnect();
-                                        task3();
+                                        new LoginGUI(client).setVisible(true);
                                     }
                                     continue;
                                 }
@@ -284,7 +204,7 @@ public final class ConvoSyncClient {
                     }
                 }
             }.start();
-            LOGGER.log(Level.INFO, null, socket);
+            LOGGER.log(Level.INFO, "{0}", socket);
             gui.cls();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);

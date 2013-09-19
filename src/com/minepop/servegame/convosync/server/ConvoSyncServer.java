@@ -551,6 +551,17 @@ public class ConvoSyncServer {
                         }
                         continue;
                     }
+                    if (input instanceof UserPropertyChange) {
+                        UserPropertyChange prop = (UserPropertyChange) input;
+                        switch (prop.PROPERTY) {
+                            case PASSWORD:
+                                server.users.remove(server.getUser(name));
+                                server.users.add(new User(new UserRegistration(name, prop.VALUE)));
+                                sendMsg(new PlayerMessage("Password changed.", name));
+                                break;
+                        }
+                        continue;
+                    }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
                         if (type == ClientType.PLUGIN) {
