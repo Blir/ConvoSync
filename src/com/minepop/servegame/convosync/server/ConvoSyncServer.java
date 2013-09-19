@@ -68,7 +68,7 @@ public class ConvoSyncServer {
         fileHandler = new FileHandler("CS-Server.log", true);
         fileHandler.setFormatter(formatter);
         fileHandler.setLevel(Level.CONFIG);
-        LOGGER.addHandler(consoleHandler);
+        LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
@@ -123,7 +123,7 @@ public class ConvoSyncServer {
             p.load(fis);
             String prop = p.getProperty("chat-color");
             chatColor = prop == null ? '\u0000' : prop.charAt(0);
-            LOGGER.log(Level.CONFIG, "Using chat cholor code \"{0}\"", chatColor);
+            LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
             prop = p.getProperty("use-prefixes");
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
