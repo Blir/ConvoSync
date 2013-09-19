@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.3 Dev 3.4
+version: 1.0.3 Dev 3.5
 author: Blir
 softdepend: [Essentials]
 commands:
@@ -29,6 +29,11 @@ commands:
     usage: §c/<command>
     permission: convosync.togglecs
     permission-message: §cYou don't have permission to use this command.
+  csregister:
+    description: Registers your CS client user account.
+    usage: §c/<command> <password> <confirm password>
+    permission: convosync.csregister
+    permission-message: §cYou don't have permission to use this command.
 permissions:
   convosync.*:
     children:
@@ -37,6 +42,7 @@ permissions:
       convosync.ctell: true
       convosync.ccmd: true
       convosync.togglecs: true
+      convosync.csregister: true
   convosync.convosync:
     description: Allows use of the /convosync command.
   convosync.csay:
@@ -48,4 +54,6 @@ permissions:
   convosync.togglecs:
     description: Allows use of the /togglecs command.
     default: true
-    
+  convosync.csregister:
+    description: Allows use of the /csregister command.
+    default: true

@@ -30,7 +30,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     private enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, REGISTER, SETMAXPLAYERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -198,19 +198,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
                             + "Now using max player count of " + ChatColor.BLUE
                             + max + ChatColor.GREEN + ".");
                     return true;
-                case REGISTER:
-                    if (!(sender instanceof Player)) {
-                        sender.sendMessage(ChatColor.RED
-                                + "You must be a player to use this command!");
-                        return true;
-                    }
-                    if (args.length != 3 || !args[1].equals(args[2])) {
-                        sender.sendMessage(ChatColor.RED
-                                + "/convosync register <password> <confirm password>");
-                        return true;
-                    }
-                    out(new UserRegistration(sender.getName(), args[1]), false);
-                    return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {
             StringBuilder sb = new StringBuilder();
@@ -314,6 +301,19 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 sender.sendMessage(ChatColor.RED
                         + "You must be a player to use this command.");
             }
+            return true;
+        } else if (cmd.getName().equals("csregister")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED
+                        + "You must be a player to use this command!");
+                return true;
+            }
+            if (args.length < 2 || !args[0].equals(args[1])) {
+                sender.sendMessage(ChatColor.RED
+                        + "/csregister <password> <confirm password>");
+                return true;
+            }
+            out(new UserRegistration(sender.getName(), args[1]), false);
             return true;
         }
         return false;

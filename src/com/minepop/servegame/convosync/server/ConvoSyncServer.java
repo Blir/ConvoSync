@@ -449,7 +449,14 @@ public class ConvoSyncServer {
                                 if (server.userMap.get(element) != null) {
                                     server.out(new PlayerMessage(
                                             "You cannot be logged into the client and the game simultaneously.", element), this);
-                                    server.getClient(element).close();
+                                    Client client = server.getClient(element);
+                                    if (client == null) {
+                                        LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
+                                                + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
+                                                element);
+                                    } else {
+                                        server.getClient(element).close();
+                                    }
                                 }
                                 server.userMap.put(element, localname);
                             }

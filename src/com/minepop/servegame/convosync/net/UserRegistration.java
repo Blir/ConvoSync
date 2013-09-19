@@ -12,4 +12,9 @@ public class UserRegistration extends Message {
         this.USER = user;
         this.PASSWORD = password;
     }
+    
+    @Override
+    public String toString() {
+        return "UserRegistration[" + USER + "]";
+    }
 }
