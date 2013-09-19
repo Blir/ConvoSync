@@ -196,7 +196,7 @@ public final class ConvoSyncClient {
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
-            out(new ApplicationAuthenticationRequest(name, password));
+            out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
             new Thread() {
                 @Override
                 public void run() {

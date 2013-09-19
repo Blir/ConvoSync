@@ -1,5 +1,6 @@
 package com.minepop.servegame.convosync.plugin;
 
+import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -392,7 +393,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         for (int idx = 0; idx < list.length; idx++) {
             list[idx] = getServer().getOnlinePlayers()[idx].getName();
         }
-        out(new PluginAuthenticationRequest(getServer().getServerName(), password, list), true);
+        out(new PluginAuthenticationRequest(getServer().getServerName(), password, Main.VERSION, list), true);
         final ConvoSync plugin = this;
         new Thread() {
             @Override

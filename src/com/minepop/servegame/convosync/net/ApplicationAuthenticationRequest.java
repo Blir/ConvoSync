@@ -6,12 +6,12 @@ package com.minepop.servegame.convosync.net;
  */
 public class ApplicationAuthenticationRequest extends AuthenticationRequest {
     
-    public ApplicationAuthenticationRequest(String name, String password) {
-        super(name, password);
+    public ApplicationAuthenticationRequest(String name, String password, String version) {
+        super(name, password, version);
     }
     
     @Override
     public String toString() {
-        return "ApplicationAuthenticationRequest[" + NAME + "]";
+        return "ApplicationAuthenticationRequest[" + NAME + "," + VERSION +  "]";
     }
 }

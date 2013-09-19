@@ -43,6 +43,7 @@ public class ConvoSyncServer {
     private List<User> users = new ArrayList<User>();
     private List<String> banlist = new ArrayList<String>();
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
+    private Handler consoleHandler, fileHandler;
     private char chatColor;
     private QuickCipher cipher;
 
@@ -54,20 +55,20 @@ public class ConvoSyncServer {
     }
 
     public void run(String[] startupArgs) throws IOException {
-        Handler handler = new ConsoleHandler();
+        consoleHandler = new ConsoleHandler();
         java.util.logging.Formatter formatter = new CompactFormatter() {
             @Override
             public String format(LogRecord rec) {
                 return Main.format(super.format(rec));
             }
         };
-        handler.setFormatter(formatter);
-        handler.setLevel(Level.CONFIG);
-        LOGGER.addHandler(handler);
-        handler = new FileHandler("CS-Server.log", true);
-        handler.setFormatter(formatter);
-        handler.setLevel(Level.CONFIG);
-        LOGGER.addHandler(handler);
+        consoleHandler.setFormatter(formatter);
+        consoleHandler.setLevel(Level.CONFIG);
+        LOGGER.addHandler(consoleHandler);
+        fileHandler = new FileHandler("CS-Server.log", true);
+        fileHandler.setFormatter(formatter);
+        fileHandler.setLevel(Level.CONFIG);
+        LOGGER.addHandler(consoleHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
         LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
@@ -387,7 +388,7 @@ public class ConvoSyncServer {
         private ObjectOutputStream out;
         private ObjectInputStream in;
         private boolean alive = true, auth = false, enabled = true;
-        private String name, localname;
+        private String name, localname, version;
 
         private Client(Socket socket) throws IOException {
             super();
@@ -472,6 +473,7 @@ public class ConvoSyncServer {
                         name = authReq.NAME;
                         localname = format(name);
                         type = ClientType.PLUGIN;
+                        version = authReq.VERSION;
                         auth = authReq.PASSWORD.equals(server.pluginPassword);
                         sendMsg(new AuthenticationRequestResponse(auth, null));
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
@@ -490,6 +492,7 @@ public class ConvoSyncServer {
                         type = ClientType.APPLICATION;
                         AuthenticationRequestResponse.Reason reason = null;
                         ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
+                        version = authReq.VERSION;
                         User user = server.getUser(authReq.NAME);
                         if (user == null) {
                             reason = AuthenticationRequestResponse.Reason.INVALID_USER;
@@ -610,7 +613,7 @@ public class ConvoSyncServer {
 
         @Override
         public String toString() {
-            return "Client[" + localname + "," + socket + "," + super.toString() + "]";
+            return "Client[" + localname + "," + version + "," + socket + "," + super.toString() + "]";
         }
     }
 
@@ -824,14 +827,12 @@ public class ConvoSyncServer {
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled." : "Debug mode disabled.");
                 if (debug) {
-                    for (Handler handler : LOGGER.getHandlers()) {
-                        handler.setLevel(Level.FINEST);
-                    }
+                    consoleHandler.setLevel(Level.FINEST);
+                    fileHandler.setLevel(Level.FINEST);
                     LOGGER.setLevel(Level.FINEST);
                 } else {
-                    for (Handler handler : LOGGER.getHandlers()) {
-                        handler.setLevel(Level.CONFIG);
-                    }
+                    consoleHandler.setLevel(Level.CONFIG);
+                    fileHandler.setLevel(Level.CONFIG);
                     LOGGER.setLevel(Level.CONFIG);
                 }
                 break;
