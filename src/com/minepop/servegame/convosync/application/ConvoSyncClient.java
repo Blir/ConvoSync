@@ -175,10 +175,9 @@ public final class ConvoSyncClient {
                                                 gui.log("You're already logged in.");
                                                 break;
                                         }
-                                        name = null;
                                         password = null;
                                         disconnect();
-                                        new LoginGUI(client, ip, port, name, password).setVisible(true);
+                                        new LoginGUI(client, ip, port, name, null).setVisible(true);
                                     }
                                     continue;
                                 }

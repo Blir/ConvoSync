@@ -313,13 +313,13 @@ public class ConvoSync extends JavaPlugin implements Listener {
             Random rng = new Random();
             StringBuilder sb = new StringBuilder(
                     new String[]{"poptarts", "fedora", "oops", "potato"}[rng.nextInt(4)]);
-            int length = rng.nextInt(10);
+            int length = rng.nextInt(4);
             for (int idx = 0; idx < length; idx++) {
                 sb.append((char) (rng.nextInt(10) + 48));
             }
             out(new UserRegistration(sender.getName(), sb.toString()), false);
             sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
-                    + ChatColor.BLUE + sb.toString() + ChatColor.GREEN + "\"");
+                    + ChatColor.BLUE + sb.toString() + ChatColor.GREEN + "\".");
             return true;
         }
         return false;

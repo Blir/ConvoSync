@@ -544,11 +544,10 @@ public class ConvoSyncServer {
                     if (input instanceof UserRegistration) {
                         UserRegistration reg = (UserRegistration) input;
                         if (server.isUserRegistered(reg.USER)) {
-                            sendMsg(new PlayerMessage(COLOR_CHAR + "cYou're already registered.", reg.USER), false);
-                        } else {
-                            server.users.add(new User(reg));
-                            sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
+                            server.users.remove(server.getUser(reg.USER));
                         }
+                        server.users.add(new User(reg));
+                        sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
                         continue;
                     }
                     if (input instanceof UserPropertyChange) {
