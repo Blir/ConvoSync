@@ -196,7 +196,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 int delim = input.getText().indexOf(" ");
                 if (delim > 0) {
                     String server = input.getText().substring(1, delim);
-                    String cmd = input.getText().substring(delim);
+                    String cmd = input.getText().substring(delim + 1);
                     client.out(new CommandMessage(client.name, server, cmd));
                 } else {
                     logChat("Usage: /<server> <command>");

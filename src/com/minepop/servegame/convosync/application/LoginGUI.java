@@ -13,10 +13,19 @@ public class LoginGUI extends javax.swing.JFrame {
     /**
      * Creates new form LoginGUI
      */
-    public LoginGUI(ConvoSyncClient client) {
+    public LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password) {
         super(client.toString());
         this.client = client;
         initComponents();
+        if (ip != null && port != 0) {
+            jTextField1.setText(ip + ":" + port);
+        }
+        if (user != null) {
+            jTextField2.setText(user);
+        }
+        if (password != null) {
+            jPasswordField1.setText(password);
+        }
         jTextField1.grabFocus();
         jTextField1.setSelectionStart(0);
         jTextField1.setSelectionEnd(jTextField1.getText().length());
@@ -65,6 +74,11 @@ public class LoginGUI extends javax.swing.JFrame {
         });
 
         jPasswordField1.setText("password");
+        jPasswordField1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onLogin(evt);
+            }
+        });
 
         jButton1.setText("Login");
         jButton1.addActionListener(new java.awt.event.ActionListener() {

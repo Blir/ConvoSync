@@ -86,7 +86,7 @@ public final class ConvoSyncClient {
             }
         }
         gui = new ConvoSyncGUI(this);
-        new LoginGUI(this).setVisible(true);
+        new LoginGUI(this, ip, port, name, password).setVisible(true);
     }
 
     protected boolean reconnect() {
@@ -178,7 +178,7 @@ public final class ConvoSyncClient {
                                         name = null;
                                         password = null;
                                         disconnect();
-                                        new LoginGUI(client).setVisible(true);
+                                        new LoginGUI(client, ip, port, name, password).setVisible(true);
                                     }
                                     continue;
                                 }
