@@ -38,7 +38,7 @@ public class ConvoSyncServer {
     private ServerSocket socket;
     private Scanner in;
     private boolean open = true, debug = false, prefix = true;
-    private List<Client> clients = new ArrayList<Client>();
+    private final List<Client> clients = new ArrayList<Client>();
     private String name = "ConvoSyncServer", pluginPassword;
     private Map<String, String> userMap = new HashMap<String, String>();
     private List<User> users = new ArrayList<User>();
@@ -192,7 +192,9 @@ public class ConvoSyncServer {
                     try {
                         clientSocket = socket.accept();
                         client = new Client(clientSocket);
-                        clients.add(client);
+                        synchronized (clients) {
+                            clients.add(client);
+                        }
                         client.server = server;
                         client.start();
                         LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
@@ -232,7 +234,7 @@ public class ConvoSyncServer {
 
     private boolean alive() {
         for (Client client : clients) {
-            if (client.isAlive()) {
+            if (client.isAlive() || client.alive) {
                 return true;
             }
         }
@@ -257,7 +259,9 @@ public class ConvoSyncServer {
             }
         } finally {
             userMap.clear();
-            clients.clear();
+            synchronized (clients) {
+                clients.clear();
+            }
             try {
                 socket.close();
             } finally {
@@ -564,13 +568,17 @@ public class ConvoSyncServer {
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
                         alive = false;
-                        server.clients.remove(this);
+                        synchronized (server.clients) {
+                            server.clients.remove(this);
+                        }
                         close(false);
                     }
                 } catch (IOException ex) {
                     alive = false;
                     if (server.open) {
-                        server.clients.remove(this);
+                        synchronized (server.clients) {
+                            server.clients.remove(this);
+                        }
                     }
                     if (!socket.isClosed()) {
                         try {
@@ -582,7 +590,9 @@ public class ConvoSyncServer {
                 } catch (ClassNotFoundException ex) {
                     alive = false;
                     if (server.open) {
-                        server.clients.remove(this);
+                        synchronized (server.clients) {
+                            server.clients.remove(this);
+                        }
                     }
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
                     try {
@@ -746,7 +756,9 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.close(true);
+                            synchronized (clients) {
+                                client.close(true);
+                            }
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
@@ -849,7 +861,7 @@ public class ConvoSyncServer {
                         + "/setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
                         + "/kick <port>               - Closes the socket on the specified port.\n"
                         + "/list                      - Lists all connected clients.\n"
-                        + "/users <list|op|register>  - Used to manage client users.\n"
+                        + "/users <list|op|unregister>- Used to manage client users.\n"
                         + "/name [name]               - Sets your name to the given name.\n"
                         + "/help                      - Prints all commands.\n"
                         + "/debug                     - Toggles debug mode.");
