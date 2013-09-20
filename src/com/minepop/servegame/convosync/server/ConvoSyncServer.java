@@ -563,14 +563,9 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
-                        if (type == ClientType.PLUGIN) {
-                            server.userMap.values().removeAll(Collections.singleton(localname));
-                        } else {
-                            server.notify(new PlayerListMessage(name, false), ClientType.APPLICATION);
-                            server.userMap.remove(name);
-                        }
                         alive = false;
                         server.clients.remove(this);
+                        close(false);
                     }
                 } catch (IOException ex) {
                     alive = false;
@@ -629,6 +624,12 @@ public class ConvoSyncServer {
             socket.close();
             if (kick) {
                 server.out(name + " has been kicked.", this);
+            }
+            if (type == ClientType.PLUGIN) {
+                server.userMap.values().removeAll(Collections.singleton(localname));
+            } else {
+                server.notify(new PlayerListMessage(name, false), ClientType.APPLICATION);
+                server.userMap.remove(name);
             }
         }
 
@@ -747,7 +748,6 @@ public class ConvoSyncServer {
                         try {
                             client.close(true);
                             LOGGER.log(Level.INFO, "Client closed.");
-                            out(client.name + " has been kicked.", client);
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
                         }
