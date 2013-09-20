@@ -253,7 +253,7 @@ public class ConvoSyncServer {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             for (Client client : clients) {
-                client.close();
+                client.close(false);
             }
         } finally {
             userMap.clear();
@@ -459,7 +459,7 @@ public class ConvoSyncServer {
                                                 + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
                                                 element);
                                     } else {
-                                        server.getClient(element).close();
+                                        server.getClient(element).close(true);
                                     }
                                 }
                                 server.userMap.put(element, localname);
@@ -487,7 +487,7 @@ public class ConvoSyncServer {
                             if (server.userMap.get(element) != null) {
                                 server.out(new PlayerMessage(
                                         "You cannot be logged into the client and the game simultaneously.", element), this);
-                                server.getClient(element).close();
+                                server.getClient(element).close(true);
                             }
                             server.userMap.put(element, localname);
                         }
@@ -623,11 +623,13 @@ public class ConvoSyncServer {
             }
         }
 
-        private void close() throws IOException {
+        private void close(boolean kick) throws IOException {
             alive = false;
             sendMsg(new DisconnectMessage());
             socket.close();
-            server.out(name + " has been kicked.", this);
+            if (kick) {
+                server.out(name + " has been kicked.", this);
+            }
         }
 
         @Override
@@ -743,7 +745,7 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.close();
+                            client.close(true);
                             LOGGER.log(Level.INFO, "Client closed.");
                             out(client.name + " has been kicked.", client);
                         } catch (IOException ex) {
@@ -824,7 +826,7 @@ public class ConvoSyncServer {
                         Client client = getClient(args[1]);
                         if (client != null) {
                             try {
-                                client.close();
+                                client.close(true);
                             } catch (IOException ex) {
                                 LOGGER.log(Level.INFO, "Error closing client.", ex);
                             }
