@@ -330,7 +330,7 @@ public class ConvoSyncServer {
             return;
         }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN && client.localname.equals(clientName)) {
+            if (client.localname.equals(clientName)) {
                 client.sendMsg(msg);
             }
         }
