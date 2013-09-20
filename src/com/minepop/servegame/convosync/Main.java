@@ -1,9 +1,6 @@
 package com.minepop.servegame.convosync;
 
 import blir.swing.QuickGUI;
-import blir.swing.listener.InputListener;
-import blir.swing.quickgui.InputBox;
-import blir.swing.quickgui.MsgBox;
 import com.minepop.servegame.convosync.application.ConvoSyncClient;
 import com.minepop.servegame.convosync.server.ConvoSyncServer;
 import java.io.IOException;
@@ -23,6 +20,10 @@ public class Main {
     }
 
     public static void main(final String[] args) throws IOException {
+        /*for (String s : "oops:123".split(":")) {
+            System.out.println(s);
+        }
+        System.out.println("oops:123".split(":").length);*/
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {

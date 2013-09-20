@@ -1,8 +1,6 @@
 package com.minepop.servegame.convosync.application;
 
 import blir.swing.quickgui.MsgBox;
-import com.minepop.servegame.convosync.Main;
-import com.minepop.servegame.convosync.net.ApplicationAuthenticationRequest;
 
 /**
  *
@@ -22,6 +20,7 @@ public class LoginGUI extends javax.swing.JFrame {
         jTextField1.grabFocus();
         jTextField1.setSelectionStart(0);
         jTextField1.setSelectionEnd(jTextField1.getText().length());
+        setLocationRelativeTo(null);
     }
 
     /**
@@ -141,7 +140,7 @@ public class LoginGUI extends javax.swing.JFrame {
         int port = 25000;
         if (ipAndPort.contains(":")) {
             String[] ipAndPortPieces = ipAndPort.split(":");
-            if (ipAndPortPieces.length > 2) {
+            if (ipAndPortPieces.length > 1) {
                 ip = ipAndPortPieces[0];
                 try {
                     port = Integer.parseInt(ipAndPortPieces[1]);

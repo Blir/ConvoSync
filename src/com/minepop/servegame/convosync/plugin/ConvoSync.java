@@ -315,7 +315,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     new String[]{"poptarts", "fedora", "oops", "potato"}[rng.nextInt(4)]);
             int length = rng.nextInt(10);
             for (int idx = 0; idx < length; idx++) {
-                sb.append((char) (rng.nextInt(93) + 33));
+                sb.append((char) (rng.nextInt(10) + 48));
             }
             out(new UserRegistration(sender.getName(), sb.toString()), false);
             sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""

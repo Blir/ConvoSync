@@ -1,10 +1,6 @@
 package com.minepop.servegame.convosync.application;
 
 import blir.swing.QuickGUI;
-import blir.swing.listener.*;
-import blir.swing.quickgui.InputBox;
-import blir.swing.quickgui.MsgBox;
-import blir.swing.quickgui.PasswordBox;
 import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
@@ -206,6 +202,7 @@ public final class ConvoSyncClient {
             }.start();
             LOGGER.log(Level.INFO, "{0}", socket);
             gui.cls();
+            gui.setVisible(true);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
             return false;

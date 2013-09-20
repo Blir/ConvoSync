@@ -81,6 +81,7 @@ public class SelectionGUI extends javax.swing.JFrame {
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
         }
+        dispose();
     }//GEN-LAST:event_onLaunchServer
 
     private void OnLaunchClient(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OnLaunchClient
@@ -89,6 +90,7 @@ public class SelectionGUI extends javax.swing.JFrame {
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
         }
+        dispose();
     }//GEN-LAST:event_OnLaunchClient
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
