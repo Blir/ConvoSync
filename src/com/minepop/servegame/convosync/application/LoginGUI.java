@@ -1,6 +1,7 @@
 package com.minepop.servegame.convosync.application;
 
 import blir.swing.quickgui.MsgBox;
+import java.awt.Cursor;
 
 /**
  *
@@ -49,6 +50,7 @@ public class LoginGUI extends javax.swing.JFrame {
         jPasswordField1 = new javax.swing.JPasswordField();
         jButton1 = new javax.swing.JButton();
         jProgressBar1 = new javax.swing.JProgressBar();
+        jLabel4 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -87,6 +89,8 @@ public class LoginGUI extends javax.swing.JFrame {
             }
         });
 
+        jLabel4.setText("Enter user credentials.");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -104,10 +108,11 @@ public class LoginGUI extends javax.swing.JFrame {
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 103, Short.MAX_VALUE)
                             .addComponent(jPasswordField1)
-                            .addComponent(jTextField2))))
+                            .addComponent(jTextField2)))
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
             .addGroup(layout.createSequentialGroup()
-                .addGap(74, 74, 74)
+                .addGap(75, 75, 75)
                 .addComponent(jButton1)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -126,9 +131,11 @@ public class LoginGUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
                     .addComponent(jPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 13, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addComponent(jButton1)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addComponent(jLabel4)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jProgressBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
         );
@@ -149,43 +156,50 @@ public class LoginGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onUserNameEntered
 
     private void onLogin(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogin
-        String ipAndPort = jTextField1.getText();
-        String ip;
-        int port = 25000;
-        if (ipAndPort.contains(":")) {
-            String[] ipAndPortPieces = ipAndPort.split(":");
-            if (ipAndPortPieces.length > 1) {
-                ip = ipAndPortPieces[0];
-                try {
-                    port = Integer.parseInt(ipAndPortPieces[1]);
-                } catch (NumberFormatException ex) {
-                    new MsgBox("ConvoSyncClient - Warning", "Invalid port.", false).setVisible(true);
-                    return;
+        final Cursor preCursor = getCursor();
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        jProgressBar1.setIndeterminate(true);
+        jLabel4.setText("Connecting...");
+        new Thread() {
+            @Override
+            public void run() {
+                client.name = jTextField2.getText();
+                String ipAndPort = jTextField1.getText();
+                String ip;
+                int port = 25000;
+                if (ipAndPort.contains(":")) {
+                    String[] ipAndPortPieces = ipAndPort.split(":");
+                    if (ipAndPortPieces.length > 1) {
+                        ip = ipAndPortPieces[0];
+                        try {
+                            port = Integer.parseInt(ipAndPortPieces[1]);
+                        } catch (NumberFormatException ex) {
+                            new MsgBox("ConvoSyncClient - Warning", "Invalid port.", false).setVisible(true);
+                            return;
+                        }
+                    } else {
+                        new MsgBox("ConvoSyncClient - Warning", "Invalid format.", false).setVisible(true);
+                        return;
+                    }
+                } else {
+                    ip = ipAndPort;
                 }
-            } else {
-                new MsgBox("ConvoSyncClient - Warning", "Invalid format.", false).setVisible(true);
-                return;
+                if (client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()))) {
+                    dispose();
+                } else {
+                    jLabel4.setText("Couldn't reach server.");
+                }
+                setCursor(preCursor);
+                jProgressBar1.setIndeterminate(false);
             }
-        } else {
-            ip = ipAndPort;
-        }
-        client.name = jTextField2.getText();
-        if (client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()))) {
-            dispose();
-        } else {
-            new MsgBox("ConvoSyncClient - Warning", "Couldn't reach server. Press OK to retry.", new Runnable() {
-                @Override
-                public void run() {
-                    onLogin(null);
-                }
-            }, false).setVisible(true);
-        }
+        }.start();
     }//GEN-LAST:event_onLogin
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
     private javax.swing.JPasswordField jPasswordField1;
     private javax.swing.JProgressBar jProgressBar1;
     private javax.swing.JTextField jTextField1;
