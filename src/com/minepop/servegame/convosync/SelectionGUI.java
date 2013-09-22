@@ -76,23 +76,22 @@ public class SelectionGUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void onLaunchServer(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLaunchServer
+        dispose();
         try {
             ConvoSyncServer.main(args);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
         }
-        dispose();
     }//GEN-LAST:event_onLaunchServer
 
     private void OnLaunchClient(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OnLaunchClient
+        dispose();
         try {
             new ConvoSyncClient().run(args);
         } catch (IOException ex) {
             ex.printStackTrace(System.out);
         }
-        dispose();
     }//GEN-LAST:event_OnLaunchClient
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton clientButton;
     private javax.swing.JButton serverButton;

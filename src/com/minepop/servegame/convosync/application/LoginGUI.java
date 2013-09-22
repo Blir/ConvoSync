@@ -174,20 +174,21 @@ public class LoginGUI extends javax.swing.JFrame {
                         try {
                             port = Integer.parseInt(ipAndPortPieces[1]);
                         } catch (NumberFormatException ex) {
-                            new MsgBox("ConvoSyncClient - Warning", "Invalid port.", false).setVisible(true);
+                            jLabel4.setText("Invalid port.");
                             return;
                         }
                     } else {
-                        new MsgBox("ConvoSyncClient - Warning", "Invalid format.", false).setVisible(true);
+                        jLabel4.setText("Invalid IP format.");
                         return;
                     }
                 } else {
                     ip = ipAndPort;
                 }
-                if (client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()))) {
+                String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()));
+                if (msg == null) {
                     dispose();
                 } else {
-                    jLabel4.setText("Couldn't reach server.");
+                    jLabel4.setText(msg);
                 }
                 setCursor(preCursor);
                 jProgressBar1.setIndeterminate(false);

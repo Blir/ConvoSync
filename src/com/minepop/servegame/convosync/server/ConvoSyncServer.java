@@ -88,6 +88,8 @@ public class ConvoSyncServer {
             cipher.decrypt(new File("users.sav.dat"), decrypted, new File("key.dat"));
             ois = new ObjectInputStream(new FileInputStream(decrypted));
             users.addAll(Arrays.asList((User[]) ois.readObject()));
+        } catch (FileNotFoundException ex) {
+            // ignore
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading user data.", ex);
         } catch (ClassNotFoundException ex) {
@@ -116,6 +118,8 @@ public class ConvoSyncServer {
                 banlist.add(scanner.nextLine());
             }
             scanner.close();
+        } catch (FileNotFoundException ex) {
+            // ignore
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading ban list.", ex);
         }
@@ -131,6 +135,8 @@ public class ConvoSyncServer {
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
             fis.close();
+        } catch (FileNotFoundException ex) {
+            // ignore
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "Couldn't load config:", ex);
         }

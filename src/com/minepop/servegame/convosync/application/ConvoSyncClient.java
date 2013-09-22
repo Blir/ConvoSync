@@ -89,19 +89,19 @@ public final class ConvoSyncClient {
         new LoginGUI(this, ip, port, name, password).setVisible(true);
     }
 
-    protected boolean reconnect() {
+    protected String reconnect() {
         disconnect();
         return connect();
     }
 
-    protected boolean connect(String ip, int port, String password) {
+    protected String connect(String ip, int port, String password) {
         this.ip = ip;
         this.port = port;
         this.password = password;
         return connect();
     }
-    
-    private boolean connect() {
+
+    private String connect() {
         try {
             gui.clearUserList();
             //model.addElement("SERVER");
@@ -203,10 +203,10 @@ public final class ConvoSyncClient {
             gui.cls();
             gui.setVisible(true);
         } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, null, ex);
-            return false;
+            LOGGER.log(Level.SEVERE, ex.toString());
+            return ex.getMessage();
         }
-        return true;
+        return null;
     }
 
     protected void disconnect() {
