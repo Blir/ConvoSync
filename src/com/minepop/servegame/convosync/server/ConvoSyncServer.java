@@ -188,54 +188,10 @@ public class ConvoSyncServer {
             pluginPassword = in.nextLine();
         }
         open();
-        final ConvoSyncServer server = this;
-        new Thread() {
-            @Override
-            public void run() {
-                Socket clientSocket;
-                Client client;
-                while (open) {
-                    try {
-                        clientSocket = socket.accept();
-                        client = new Client(clientSocket);
-                        synchronized (clients) {
-                            clients.add(client);
-                        }
-                        client.server = server;
-                        client.start();
-                        LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
-                    } catch (Exception ex) {
-                        if (!socket.isClosed()) {
-                            LOGGER.log(Level.SEVERE, "Error accepting a connection!", ex);
-                        }
-                    }
-                }
-            }
-        }.start();
+        
+        new ConnectionAcceptionThread(this).start();
 
-        String input;
-        while (open || alive()) {
-            try {
-                input = in.nextLine();
-                if (input != null && input.length() > 0) {
-                    if (input.charAt(0) == '/') {
-                        int delim = input.indexOf(" ");
-                        Command cmd;
-                        try {
-                            cmd = Command.valueOf((delim > 0 ? input.substring(0, delim) : input).substring(1).toUpperCase());
-                        } catch (IllegalArgumentException ex) {
-                            cmd = Command.HELP;
-                        }
-                        String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
-                        dispatchCommand(cmd, args);
-                    } else {
-                        out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
-                    }
-                }
-            } catch (Exception ex) {
-                LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
-            }
-        }
+        new InputThread(this).start();
     }
 
     private boolean alive() {
@@ -923,5 +879,72 @@ public class ConvoSyncServer {
             }
         }
         return null;
+    }
+
+    private static class InputThread extends Thread {
+
+        private ConvoSyncServer server;
+
+        private InputThread(ConvoSyncServer server) {
+            this.server = server;
+        }
+
+        @Override
+        public void run() {
+            String input;
+            while (server.open || server.alive()) {
+                try {
+                    input = server.in.nextLine();
+                    if (input != null && input.length() > 0) {
+                        if (input.charAt(0) == '/') {
+                            int delim = input.indexOf(" ");
+                            Command cmd;
+                            try {
+                                cmd = Command.valueOf((delim > 0 ? input.substring(0, delim) : input).substring(1).toUpperCase());
+                            } catch (IllegalArgumentException ex) {
+                                cmd = Command.HELP;
+                            }
+                            String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
+                            server.dispatchCommand(cmd, args);
+                        } else {
+                            server.out("<" + COLOR_CHAR + "5" + server.name + COLOR_CHAR + "f> " + input, null);
+                        }
+                    }
+                } catch (Exception ex) {
+                    LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
+                }
+            }
+        }
+    }
+
+    private static class ConnectionAcceptionThread extends Thread {
+
+        private ConvoSyncServer server;
+        
+        private ConnectionAcceptionThread(ConvoSyncServer server) {
+            this.server = server;
+        }
+        
+        @Override
+        public void run() {
+            Socket clientSocket;
+            Client client;
+            while (server.open) {
+                try {
+                    clientSocket = server.socket.accept();
+                    client = new Client(clientSocket);
+                    synchronized (server.clients) {
+                        server.clients.add(client);
+                    }
+                    client.server = server;
+                    client.start();
+                    LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
+                } catch (Exception ex) {
+                    if (!server.socket.isClosed()) {
+                        LOGGER.log(Level.SEVERE, "Error accepting a connection!", ex);
+                    }
+                }
+            }
+        }
     }
 }
