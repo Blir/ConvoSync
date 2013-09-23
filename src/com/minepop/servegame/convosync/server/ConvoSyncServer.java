@@ -188,13 +188,13 @@ public class ConvoSyncServer {
             pluginPassword = in.nextLine();
         }
         open();
-        
+
         new ConnectionAcceptionThread(this).start();
 
         new InputThread(this).start();
     }
 
-    private boolean alive() {
+    private synchronized boolean alive() {
         for (Client client : clients) {
             if (client.isAlive() || client.alive) {
                 return true;
@@ -213,7 +213,7 @@ public class ConvoSyncServer {
         LOGGER.log(Level.INFO, socket.toString());
     }
 
-    private void close(boolean force) throws IOException {
+    private synchronized void close(boolean force) throws IOException {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             for (Client client : clients) {
@@ -221,9 +221,7 @@ public class ConvoSyncServer {
             }
         } finally {
             userMap.clear();
-            synchronized (clients) {
-                clients.clear();
-            }
+            clients.clear();
             try {
                 socket.close();
             } finally {
@@ -234,24 +232,25 @@ public class ConvoSyncServer {
         }
     }
 
-    private void out(String msg, Client sender) {
+    private synchronized void out(String msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
         for (Client client : clients) {
             if (client != sender && client.auth) {
                 if (sender == null && client.enabled) {
-                    client.sendMsg(new ChatMessage(msg, true));
+                    client.sendMsg(new ChatMessage(msg, true), false);
                 } else {
                     client.sendMsg(msg, false);
                 }
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "NA" : sender.socket.getPort(), format(msg)});
+                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
+            format(msg)});
     }
 
-    private void out(ChatMessage msg, Client sender) {
+    private synchronized void out(ChatMessage msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
@@ -261,7 +260,8 @@ public class ConvoSyncServer {
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "NA" : sender.socket.getPort(), format(msg.MSG)});
+                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
+            format(msg.MSG)});
     }
 
     private static void debug(String input) {
@@ -273,15 +273,15 @@ public class ConvoSyncServer {
         }
     }
 
-    private void notify(PlayerListMessage notification, Client.ClientType type) {
+    private synchronized void notify(PlayerListMessage notification, Client.ClientType type) {
         for (Client client : clients) {
             if (client.type == type && client.auth) {
-                client.sendMsg(notification);
+                client.sendMsg(notification, false);
             }
         }
     }
 
-    private void out(PrivateMessage msg, Client sender) {
+    private synchronized void out(PrivateMessage msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
@@ -292,17 +292,17 @@ public class ConvoSyncServer {
         if (clientName == null && sender != null) {
             sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \""
                     + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR
-                    + "c\" not found.", msg.SENDER));
+                    + "c\" not found.", msg.SENDER), false);
             return;
         }
         for (Client client : clients) {
             if (client.localname.equals(clientName)) {
-                client.sendMsg(msg);
+                client.sendMsg(msg, false);
             }
         }
     }
 
-    private void out(PlayerMessage msg, Client sender) {
+    private synchronized void out(PlayerMessage msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
@@ -312,31 +312,34 @@ public class ConvoSyncServer {
         }
         for (Client client : clients) {
             if (client.localname.equals(clientName)) {
-                client.sendMsg(msg);
+                client.sendMsg(msg, false);
             }
         }
     }
 
-    private void out(CommandMessage msg, Client sender) {
+    private synchronized void out(CommandMessage msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN && client.name.equalsIgnoreCase(msg.TARGET)) {
-                client.sendMsg(msg);
+            if (client.type == Client.ClientType.PLUGIN
+                    && client.name.equalsIgnoreCase(msg.TARGET)) {
+                client.sendMsg(msg, false);
                 if (sender != null) {
-                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg + " sent!", msg.SENDER));
+                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg
+                            + " sent!", msg.SENDER), false);
                 }
                 return;
             }
         }
         if (sender != null) {
             sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cServer " + COLOR_CHAR
-                    + "9" + msg.TARGET + COLOR_CHAR + "c not found.", msg.SENDER));
+                    + "9" + msg.TARGET + COLOR_CHAR + "c not found.", msg.SENDER),
+                    false);
         }
     }
 
-    private Client getClient(String name) {
+    private synchronized Client getClient(String name) {
         for (Client client : clients) {
             if (client.localname.equals(name)) {
                 return client;
@@ -404,7 +407,8 @@ public class ConvoSyncServer {
                                 server.out((CommandMessage) input, this);
                             } else {
                                 sendMsg(new PlayerMessage(
-                                        "You don't have permission to use cross-server commands.", name));
+                                        "You don't have permission to use cross-server commands.",
+                                        name), false);
                             }
                         } else {
                             server.out((CommandMessage) input, this);
@@ -418,7 +422,8 @@ public class ConvoSyncServer {
                             for (String element : msg.LIST) {
                                 if (server.userMap.get(element) != null) {
                                     server.out(new PlayerMessage(
-                                            "You cannot be logged into the client and the game simultaneously.", element), this);
+                                            "You cannot be logged into the client and the game simultaneously.",
+                                            element), this);
                                     Client client = server.getClient(element);
                                     if (client == null) {
                                         LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
@@ -447,7 +452,7 @@ public class ConvoSyncServer {
                             LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, localname, version});
                         }
                         auth = authReq.PASSWORD.equals(server.pluginPassword);
-                        sendMsg(new AuthenticationRequestResponse(auth, AuthenticationRequestResponse.Reason.INVALID_PASSWORD, Main.VERSION));
+                        sendMsg(new AuthenticationRequestResponse(auth, AuthenticationRequestResponse.Reason.INVALID_PASSWORD, Main.VERSION), true);
                         server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
@@ -486,11 +491,13 @@ public class ConvoSyncServer {
                                 reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
                             }
                         }
-                        sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION));
+                        sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
                         if (auth) {
                             localname = (name = authReq.NAME);
                             sendMsg(new PlayerListMessage(
-                                    server.userMap.keySet().toArray(new String[server.userMap.keySet().size()]), true));
+                                    server.userMap.keySet().toArray(
+                                    new String[server.userMap.keySet().size()])
+                                    , true), false);
                             server.notify(new PlayerListMessage(name, true), ClientType.APPLICATION);
                             server.out(name + " has joined.", this);
                             server.userMap.put(name, "CS-Client");
@@ -522,16 +529,16 @@ public class ConvoSyncServer {
                             case PASSWORD:
                                 server.users.remove(server.getUser(name));
                                 server.users.add(new User(new UserRegistration(name, prop.VALUE)));
-                                sendMsg(new PlayerMessage("Password changed.", name));
+                                sendMsg(new PlayerMessage("Password changed.", name), false);
                                 break;
                         }
                         continue;
                     }
                     if (input instanceof UserListRequest) {
                         String sender = ((UserListRequest) input).SENDER;
-                        sendMsg(new PlayerMessage("All known online users:", sender));
+                        sendMsg(new PlayerMessage("All known online users:", sender), false);
                         for (String user : server.userMap.keySet()) {
-                            sendMsg(new PlayerMessage(user + " on server " + server.userMap.get(user), sender));
+                            sendMsg(new PlayerMessage(user + " on server " + server.userMap.get(user), sender), false);
                         }
                         continue;
                     }
@@ -600,7 +607,7 @@ public class ConvoSyncServer {
 
         private void close(boolean kick) throws IOException {
             alive = false;
-            sendMsg(new DisconnectMessage());
+            sendMsg(new DisconnectMessage(), true);
             socket.close();
             if (kick) {
                 server.out(name + " has been kicked.", this);
@@ -643,7 +650,8 @@ public class ConvoSyncServer {
                         }
                     }
                     if (cipher != null) {
-                        cipher.encrypt(decrypted, new File("users.sav.dat"), new File("key.dat"));
+                        cipher.encrypt(decrypted, new File("users.sav.dat"),
+                                new File("key.dat"));
                     }
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error saving user data.", ex);
@@ -678,7 +686,8 @@ public class ConvoSyncServer {
                     LOGGER.log(Level.WARNING, "Error saving config.", ex);
                 }
                 try {
-                    close(args != null && args.length > 0 && args[0].equalsIgnoreCase("force"));
+                    close(args != null && args.length > 0
+                            && args[0].equalsIgnoreCase("force"));
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
@@ -700,7 +709,8 @@ public class ConvoSyncServer {
                 break;
             case SETCOLOR:
                 LOGGER.log(Level.INFO, "Chat Color Code: {0}", args.length > 0
-                        && args[0].length() > 0 ? chatColor = args[0].charAt(0) : chatColor);
+                        && args[0].length() > 0 ? chatColor = args[0].charAt(0)
+                        : chatColor);
                 break;
             case SETUSEPREFIX:
                 if (args.length > 0) {
@@ -744,7 +754,8 @@ public class ConvoSyncServer {
                 if (clients.isEmpty()) {
                     LOGGER.log(Level.INFO, "There are currently no connected clients.");
                 } else {
-                    LOGGER.log(Level.INFO, "All connected clients ({0}):", clients.size());
+                    LOGGER.log(Level.INFO, "All connected clients ({0}):",
+                            clients.size());
                     for (Client client : clients) {
                         LOGGER.log(Level.INFO, "{0}", client);
                     }
@@ -798,7 +809,8 @@ public class ConvoSyncServer {
                         User user = getUser(args[1]);
                         LOGGER.log(Level.INFO, (user.op = (args.length > 2
                                 ? Boolean.parseBoolean(args[2]) : !user.op))
-                                ? "{0} is now OP." : "{0} is no longer OP.", user.NAME);
+                                ? "{0} is now OP." : "{0} is no longer OP.",
+                                user.NAME);
                         break;
                     case UNREGISTER:
                         if (args.length < 1) {
@@ -819,7 +831,8 @@ public class ConvoSyncServer {
                 }
                 break;
             case NAME:
-                LOGGER.log(Level.INFO, "Name: {0}", args.length > 0 ? name = args[0] : name);
+                LOGGER.log(Level.INFO, "Name: {0}", args.length > 0
+                        ? name = args[0] : name);
                 break;
             case HELP:
                 LOGGER.log(Level.INFO, "Commands:\n"
@@ -837,7 +850,8 @@ public class ConvoSyncServer {
                         + "/debug                     - Toggles debug mode.");
                 break;
             case DEBUG:
-                LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled." : "Debug mode disabled.");
+                LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
+                        : "Debug mode disabled.");
                 if (debug) {
                     consoleHandler.setLevel(Level.FINEST);
                     fileHandler.setLevel(Level.FINEST);
@@ -920,11 +934,11 @@ public class ConvoSyncServer {
     private static class ConnectionAcceptionThread extends Thread {
 
         private ConvoSyncServer server;
-        
+
         private ConnectionAcceptionThread(ConvoSyncServer server) {
             this.server = server;
         }
-        
+
         @Override
         public void run() {
             Socket clientSocket;
