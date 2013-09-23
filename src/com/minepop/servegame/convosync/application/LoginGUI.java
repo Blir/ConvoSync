@@ -1,7 +1,7 @@
 package com.minepop.servegame.convosync.application;
 
-import blir.swing.quickgui.MsgBox;
 import java.awt.Cursor;
+import java.util.Properties;
 
 /**
  *
@@ -14,7 +14,7 @@ public class LoginGUI extends javax.swing.JFrame {
     /**
      * Creates new form LoginGUI
      */
-    public LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password) {
+    public LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
         super(client.toString());
         this.client = client;
         initComponents();
@@ -30,6 +30,7 @@ public class LoginGUI extends javax.swing.JFrame {
         jTextField1.grabFocus();
         jTextField1.setSelectionStart(0);
         jTextField1.setSelectionEnd(jTextField1.getText().length());
+        jCheckBox1.setSelected(remember);
         setLocationRelativeTo(null);
     }
 
@@ -51,6 +52,7 @@ public class LoginGUI extends javax.swing.JFrame {
         jButton1 = new javax.swing.JButton();
         jProgressBar1 = new javax.swing.JProgressBar();
         jLabel4 = new javax.swing.JLabel();
+        jCheckBox1 = new javax.swing.JCheckBox();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -91,6 +93,8 @@ public class LoginGUI extends javax.swing.JFrame {
 
         jLabel4.setText("Enter user credentials.");
 
+        jCheckBox1.setText("Remember Login Info");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -106,15 +110,15 @@ public class LoginGUI extends javax.swing.JFrame {
                             .addComponent(jLabel1))
                         .addGap(18, 18, 18)
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(jTextField1, javax.swing.GroupLayout.DEFAULT_SIZE, 103, Short.MAX_VALUE)
+                            .addComponent(jTextField1)
                             .addComponent(jPasswordField1)
                             .addComponent(jTextField2)))
-                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addComponent(jCheckBox1)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jButton1)))
                 .addContainerGap())
-            .addGroup(layout.createSequentialGroup()
-                .addGap(75, 75, 75)
-                .addComponent(jButton1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -132,7 +136,9 @@ public class LoginGUI extends javax.swing.JFrame {
                     .addComponent(jLabel3)
                     .addComponent(jPasswordField1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGap(18, 18, 18)
-                .addComponent(jButton1)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jButton1)
+                    .addComponent(jCheckBox1))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -184,7 +190,7 @@ public class LoginGUI extends javax.swing.JFrame {
                 } else {
                     ip = ipAndPort;
                 }
-                String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()));
+                String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()), jCheckBox1.isSelected());
                 if (msg == null) {
                     dispose();
                 } else {
@@ -194,9 +200,11 @@ public class LoginGUI extends javax.swing.JFrame {
                 jProgressBar1.setIndeterminate(false);
             }
         }.start();
+        
     }//GEN-LAST:event_onLogin
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
+    private javax.swing.JCheckBox jCheckBox1;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;

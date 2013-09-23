@@ -6,6 +6,7 @@ import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.io.*;
 import java.net.Socket;
+import java.util.Properties;
 import java.util.logging.*;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -86,7 +87,32 @@ public final class ConvoSyncClient {
             }
         }
         gui = new ConvoSyncGUI(this);
-        new LoginGUI(this, ip, port, name, password).setVisible(true);
+        boolean remember = false;
+        try {
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(new File("login.properties"));
+                Properties p = new Properties();
+                p.load(fis);
+                if (Boolean.parseBoolean(p.getProperty("remember"))) {
+                    remember = true;
+                    ip = p.getProperty("ip");
+                    port = Integer.parseInt(p.getProperty("port"));
+                    name = p.getProperty("name");
+                }
+            } finally {
+                if (fis != null) {
+                    fis.close();
+                }
+            }
+        } catch (FileNotFoundException ex) {
+            // ignore
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error loading login info.", ex);
+        } catch (NumberFormatException ex) {
+            LOGGER.log(Level.WARNING, "Invalid port in saved login info.");
+        }
+        new LoginGUI(this, ip, port, name, password, remember).setVisible(true);
     }
 
     protected String reconnect() {
@@ -94,10 +120,28 @@ public final class ConvoSyncClient {
         return connect();
     }
 
-    protected String connect(String ip, int port, String password) {
+    protected String connect(String ip, int port, String password, boolean remember) {
         this.ip = ip;
         this.port = port;
         this.password = password;
+        Properties p = new Properties();
+        p.setProperty("remember", String.valueOf(remember));
+        p.setProperty("ip", ip);
+        p.setProperty("port", String.valueOf(port));
+        p.setProperty("name", name);
+        FileOutputStream fos = null;
+        try {
+            try {
+                fos = new FileOutputStream(new File("login.properties"));
+                p.store(fos, null);
+            } finally {
+                if (fos != null) {
+                    fos.close();
+                }
+            }
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error saving login info.", ex);
+        }
         return connect();
     }
 
@@ -177,7 +221,7 @@ public final class ConvoSyncClient {
                                         }
                                         password = null;
                                         disconnect();
-                                        new LoginGUI(client, ip, port, name, null).setVisible(true);
+                                        new LoginGUI(client, ip, port, name, null, false).setVisible(true);
                                     }
                                     continue;
                                 }

@@ -12,7 +12,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.3 Dev 5.1";
+    public static final String VERSION = "1.0.3 Dev 5.2";
 
     public static enum Action {
 
@@ -29,19 +29,12 @@ public class Main {
         }
         // ignore all these; just use the default look and feel
         for (String arg : args) {
-            try {
-                switch (Action.valueOf(arg.toUpperCase())) {
-                    case SERVER:
-                        ConvoSyncServer.main(args);
-                        return;
-                    case APPLICATION:
-                        new ConvoSyncClient().run(args);
-                        return;
-                }
-            } catch (IllegalArgumentException ignore) {
-            } // ignore - probably an argument used by the server or gui client
+            if (arg.equals("server")) {
+                ConvoSyncServer.main(args);
+                return;
+            }
         }
-        new SelectionGUI(args).setVisible(true);
+        new ConvoSyncClient().run(args);
     }
     public static final char COLOR_CHAR = '\u00A7';
 
