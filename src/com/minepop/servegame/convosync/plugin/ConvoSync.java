@@ -32,7 +32,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     private enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -199,6 +199,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     sender.sendMessage(ChatColor.GREEN
                             + "Now using max player count of " + ChatColor.BLUE
                             + max + ChatColor.GREEN + ".");
+                    return true;
+                case USERS:
+                    out(new UserListRequest(sender.getName()), false);
                     return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {

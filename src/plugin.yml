@@ -1,12 +1,12 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.3 Dev 5.2
+version: 1.0.3 Dev 5.3
 author: Blir
 softdepend: [Essentials]
 commands:
   convosync:
     description: Used to manage the ConvoSync plugin.
-    usage: §c/<command> <setip|setport|reconnect|disconnect|status|setmaxplayers> [other parameters]
+    usage: §c/<command> <setip|setport|reconnect|disconnect|status|setmaxplayers|users> [other parameters]
     permission: convosync.convosync
     permission-message: §cYou don't have permission to use this command.
   csay:

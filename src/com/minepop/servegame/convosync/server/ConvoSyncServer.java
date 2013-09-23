@@ -571,6 +571,14 @@ public class ConvoSyncServer {
                         }
                         continue;
                     }
+                    if (input instanceof UserListRequest) {
+                        String sender = ((UserListRequest) input).SENDER;
+                        sendMsg(new PlayerMessage("All known online users:", sender));
+                        for (String user : server.userMap.keySet()) {
+                            sendMsg(new PlayerMessage(user + " on server " + server.userMap.get(user), sender));
+                        }
+                        continue;
+                    }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
                         alive = false;
