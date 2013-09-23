@@ -77,7 +77,6 @@ public class LoginGUI extends javax.swing.JFrame {
             }
         });
 
-        jPasswordField1.setText("password");
         jPasswordField1.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onLogin(evt);
