@@ -501,9 +501,9 @@ public class ConvoSyncServer {
                         sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
                         if (auth) {
                             localname = (name = authReq.NAME);
-                            sendMsg(new PlayerListMessage(
+                            sendMsg(new PlayerListUpdate(
                                     server.userMap.keySet().toArray(
-                                    new String[server.userMap.keySet().size()]), true), false);
+                                    new String[server.userMap.keySet().size()])), false);
                             server.out(name + " has joined.", this);
                             server.userMap.put(name, "CS-Client");
                             server.notify(new PlayerListUpdate(
