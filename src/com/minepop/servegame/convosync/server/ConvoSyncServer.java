@@ -598,7 +598,9 @@ public class ConvoSyncServer {
 
         private void close(boolean kick, boolean msg) throws IOException {
             alive = false;
-            sendMsg(new DisconnectMessage(), true);
+            if (msg) {
+                sendMsg(new DisconnectMessage(), true);
+            }
             socket.close();
             if (kick) {
                 out(name + " has been kicked.", this);

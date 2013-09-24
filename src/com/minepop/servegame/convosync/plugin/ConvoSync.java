@@ -380,7 +380,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
         if (getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getQuitMessage(), false);
         }
-        essTask.remove(evt.getPlayer().getName());
+        if (essTask != null) {
+            essTask.remove(evt.getPlayer().getName());
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
