@@ -12,13 +12,13 @@ import org.bukkit.plugin.Plugin;
  *
  * @author Blir
  */
-public class EssentialsThread extends Thread {
+public class EssentialsTask implements Runnable {
 
     private ConvoSync plugin;
     private Essentials ess;
     private List<User> users = new ArrayList<User>();
 
-    protected EssentialsThread(ConvoSync plugin) {
+    protected EssentialsTask(ConvoSync plugin) {
         this.plugin = plugin;
         Plugin prospective = plugin.getServer().getPluginManager().getPlugin("Essentials");
         if (prospective != null && prospective instanceof Essentials) {

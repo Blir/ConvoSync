@@ -161,45 +161,10 @@ public class LoginGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onUserNameEntered
 
     private void onLogin(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogin
-        final Cursor preCursor = getCursor();
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         jProgressBar1.setIndeterminate(true);
         jLabel4.setText("Connecting...");
-        new Thread() {
-            @Override
-            public void run() {
-                client.name = jTextField2.getText();
-                String ipAndPort = jTextField1.getText();
-                String ip;
-                int port = 25000;
-                if (ipAndPort.contains(":")) {
-                    String[] ipAndPortPieces = ipAndPort.split(":");
-                    if (ipAndPortPieces.length > 1) {
-                        ip = ipAndPortPieces[0];
-                        try {
-                            port = Integer.parseInt(ipAndPortPieces[1]);
-                        } catch (NumberFormatException ex) {
-                            jLabel4.setText("Invalid port.");
-                            return;
-                        }
-                    } else {
-                        jLabel4.setText("Invalid IP format.");
-                        return;
-                    }
-                } else {
-                    ip = ipAndPort;
-                }
-                String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()), jCheckBox1.isSelected());
-                if (msg == null) {
-                    dispose();
-                } else {
-                    jLabel4.setText(msg);
-                }
-                setCursor(preCursor);
-                jProgressBar1.setIndeterminate(false);
-            }
-        }.start();
-        
+        new Thread(new ConnectTask(getCursor())).start();
     }//GEN-LAST:event_onLogin
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
@@ -213,4 +178,46 @@ public class LoginGUI extends javax.swing.JFrame {
     private javax.swing.JTextField jTextField1;
     private javax.swing.JTextField jTextField2;
     // End of variables declaration//GEN-END:variables
+
+    private class ConnectTask implements Runnable {
+
+        private Cursor preCursor;
+        
+        private ConnectTask(Cursor preCursor) {
+            this.preCursor = preCursor;
+        }
+        
+        @Override
+        public void run() {
+            client.name = jTextField2.getText();
+            String ipAndPort = jTextField1.getText();
+            String ip;
+            int port = 25000;
+            if (ipAndPort.contains(":")) {
+                String[] ipAndPortPieces = ipAndPort.split(":");
+                if (ipAndPortPieces.length > 1) {
+                    ip = ipAndPortPieces[0];
+                    try {
+                        port = Integer.parseInt(ipAndPortPieces[1]);
+                    } catch (NumberFormatException ex) {
+                        jLabel4.setText("Invalid port.");
+                        return;
+                    }
+                } else {
+                    jLabel4.setText("Invalid IP format.");
+                    return;
+                }
+            } else {
+                ip = ipAndPort;
+            }
+            String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()), jCheckBox1.isSelected());
+            if (msg == null) {
+                dispose();
+            } else {
+                jLabel4.setText(msg);
+            }
+            setCursor(preCursor);
+            jProgressBar1.setIndeterminate(false);
+        }
+    }
 }

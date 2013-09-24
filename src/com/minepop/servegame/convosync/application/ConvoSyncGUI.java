@@ -26,7 +26,9 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         initComponents();
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
-        ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
+        if (output.getCaret() instanceof javax.swing.text.DefaultCaret) {
+            ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
+        }
         CAL = Calendar.getInstance();
         onToggleWordWrap(null);
         setLocationRelativeTo(null);
@@ -185,7 +187,8 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 if (input.getText().equals("")) {
                     return;
                 }
-                client.out(new PrivateMessage(userList.getSelectedValue(), client.name, input.getText(), "CS-Client"));
+                client.out(new PrivateMessage(userList.getSelectedValue(),
+                        client.name, input.getText(), "CS-Client"));
             }
             userList.clearSelection();
         } else if (client.auth) {
@@ -259,7 +262,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             public void onPasswordMismatch() {
                 new MsgBox("ConvoSyncClient - Warning", "The passwords you entered did not match.", false).setVisible(true);
             }
-        }).setVisible(true);
+        }, false).setVisible(true);
     }//GEN-LAST:event_onPasswordChangeRequest
 
     public void log(String s) {

@@ -192,14 +192,14 @@ public class ConvoSyncServer {
         }
         open();
 
-        new ConnectionAcceptionThread(this).start();
+        new Thread(new ConnectionAcceptionTask()).start();
 
-        new InputThread(this).start();
+        new Thread(new InputTask()).start();
     }
 
     private boolean alive() {
         for (Client client : clients) {
-            if (client.isAlive() || client.alive) {
+            if (client.alive) {
                 return true;
             }
         }
@@ -267,9 +267,11 @@ public class ConvoSyncServer {
             format(msg.MSG)});
     }
 
-    private synchronized void notify(PlayerListUpdate update, Client.ClientType type) {
+    private synchronized void sendPlayerListUpdate() {
+        String[] list = userMap.keySet().toArray(new String[userMap.size()]);
+        PlayerListUpdate update = new PlayerListUpdate(list);
         for (Client client : clients) {
-            if (client.type == type && client.auth) {
+            if (client.type == ClientType.APPLICATION && client.auth) {
                 client.sendMsg(update, false);
             }
         }
@@ -320,7 +322,7 @@ public class ConvoSyncServer {
             return;
         }
         for (Client client : clients) {
-            if (client.type == Client.ClientType.PLUGIN
+            if (client.type == ClientType.PLUGIN
                     && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg, false);
                 if (sender != null) {
@@ -346,13 +348,13 @@ public class ConvoSyncServer {
         return null;
     }
 
-    private static class Client extends Thread {
+    private enum ClientType {
 
-        private enum ClientType {
+        PLUGIN, APPLICATION
+    }
 
-            PLUGIN, APPLICATION
-        }
-        private ConvoSyncServer server;
+    private class Client implements Runnable {
+
         private Socket socket;
         private ClientType type;
         private ObjectOutputStream out;
@@ -374,186 +376,10 @@ public class ConvoSyncServer {
                 try {
                     input = in.readObject();
                     LOGGER.log(Level.FINER, "Input: {0}", input);
-                    if (!(input instanceof Message)) {
+                    if (input instanceof Message) {
+                        processMessage((Message) input);
+                    } else {
                         LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
-                        continue;
-                    }
-                    if (input instanceof PrivateMessage) {
-                        server.out((PrivateMessage) input, this);
-                        continue;
-                    }
-                    if (input instanceof PlayerMessage) {
-                        server.out((PlayerMessage) input, this);
-                        continue;
-                    }
-                    if (input instanceof ChatMessage) {
-                        if (server.prefix || type == ClientType.APPLICATION) {
-                            if (server.chatColor == '\u0000') {
-                                server.out("[" + name + "] " + ((ChatMessage) input).MSG, this);
-                            } else {
-                                server.out("[" + COLOR_CHAR + server.chatColor
-                                        + name + COLOR_CHAR + "f] " + ((ChatMessage) input).MSG, this);
-                            }
-                        } else {
-                            server.out((ChatMessage) input, this);
-                        }
-                        continue;
-                    }
-                    if (input instanceof CommandMessage) {
-                        if (type == ClientType.APPLICATION) {
-                            if (server.getUser(name).op) {
-                                server.out((CommandMessage) input, this);
-                            } else {
-                                sendMsg(new PlayerMessage(
-                                        "You don't have permission to use cross-server commands.",
-                                        name), false);
-                            }
-                        } else {
-                            server.out((CommandMessage) input, this);
-                        }
-                        continue;
-                    }
-                    if (input instanceof PlayerListMessage) {
-                        PlayerListMessage msg = (PlayerListMessage) input;
-                        if (msg.JOIN) {
-                            for (String element : msg.LIST) {
-                                if (server.userMap.get(element) != null) {
-                                    server.out(new PlayerMessage(
-                                            "You cannot be logged into the client and the game simultaneously.",
-                                            element), this);
-                                    Client client = server.getClient(element);
-                                    if (client == null) {
-                                        LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                                + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
-                                                element);
-                                    } else {
-                                        server.getClient(element).close(true, true);
-                                    }
-                                }
-                                server.userMap.put(element, localname);
-                            }
-                        } else {
-                            for (String element : msg.LIST) {
-                                server.userMap.remove(element);
-                            }
-                        }
-                        server.notify(new PlayerListUpdate(
-                                server.userMap.keySet().toArray(
-                                new String[server.userMap.size()])),
-                                ClientType.APPLICATION);
-                        continue;
-                    }
-                    if (input instanceof PluginAuthenticationRequest) {
-                        PluginAuthenticationRequest authReq = (PluginAuthenticationRequest) input;
-                        name = authReq.NAME;
-                        localname = format(name);
-                        type = ClientType.PLUGIN;
-                        version = authReq.VERSION;
-                        if (!Main.VERSION.equals(version)) {
-                            LOGGER.log(Level.WARNING,
-                                    "Version mismatch: Local version {0}, {1} version {2}",
-                                    new Object[]{Main.VERSION, localname, version});
-                        }
-                        auth = authReq.PASSWORD.equals(server.pluginPassword);
-                        sendMsg(new AuthenticationRequestResponse(auth,
-                                AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
-                                Main.VERSION), true);
-                        for (String element : authReq.PLAYERS) {
-                            if (server.userMap.get(element) != null) {
-                                server.out(new PlayerMessage(
-                                        "You cannot be logged into the client and the game simultaneously.",
-                                        element), this);
-                                server.getClient(element).close(true, true);
-                            }
-                            server.userMap.put(element, localname);
-                        }
-                        server.out(name + " has connected.", this);
-                        server.notify(new PlayerListUpdate(server.userMap.keySet().toArray(new String[server.userMap.size()])),
-                                ClientType.APPLICATION);
-                        continue;
-                    }
-                    if (input instanceof ApplicationAuthenticationRequest) {
-                        type = ClientType.APPLICATION;
-                        AuthenticationRequestResponse.Reason reason = null;
-                        ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) input;
-                        version = authReq.VERSION;
-                        if (!Main.VERSION.equals(version)) {
-                            LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, authReq.NAME, version});
-                        }
-                        User user = server.getUser(authReq.NAME);
-                        if (user == null) {
-                            reason = AuthenticationRequestResponse.Reason.INVALID_USER;
-                        } else {
-                            if (authReq.PASSWORD.equals(user.PASSWORD)) {
-                                if (server.banlist.contains(authReq.NAME)) {
-                                    reason = AuthenticationRequestResponse.Reason.BANNED;
-                                } else {
-                                    if (server.userMap.get(authReq.NAME) == null) {
-                                        auth = true;
-                                    } else {
-                                        reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
-                                    }
-                                }
-                            } else {
-                                reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
-                            }
-                        }
-                        sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
-                        if (auth) {
-                            localname = (name = authReq.NAME);
-                            sendMsg(new PlayerListUpdate(
-                                    server.userMap.keySet().toArray(
-                                    new String[server.userMap.keySet().size()])), false);
-                            server.out(name + " has joined.", this);
-                            server.userMap.put(name, "CS-Client");
-                            server.notify(new PlayerListUpdate(
-                                    server.userMap.keySet().toArray(
-                                    new String[server.userMap.size()])),
-                                    ClientType.APPLICATION);
-                        }
-                        continue;
-                    }
-                    if (input instanceof SetEnabledProperty) {
-                        enabled = ((SetEnabledProperty) input).ENABLED;
-                        server.out(name + " has " + (enabled ? "enabled" : "disabled")
-                                + " cross-server chat due to " + (enabled ? "reduced" : "high")
-                                + " player count.", this);
-                        if (!enabled) {
-                            server.out("This doesn't affect cross-server private messages or commands.", this);
-                        }
-                        continue;
-                    }
-                    if (input instanceof UserRegistration) {
-                        UserRegistration reg = (UserRegistration) input;
-                        if (server.isUserRegistered(reg.USER)) {
-                            server.users.remove(server.getUser(reg.USER));
-                        }
-                        server.users.add(new User(reg));
-                        sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
-                        continue;
-                    }
-                    if (input instanceof UserPropertyChange) {
-                        UserPropertyChange prop = (UserPropertyChange) input;
-                        switch (prop.PROPERTY) {
-                            case PASSWORD:
-                                server.users.remove(server.getUser(name));
-                                server.users.add(new User(new UserRegistration(name, prop.VALUE)));
-                                sendMsg(new PlayerMessage("Password changed.", name), false);
-                                break;
-                        }
-                        continue;
-                    }
-                    if (input instanceof UserListRequest) {
-                        String sender = ((UserListRequest) input).SENDER;
-                        sendMsg(new PlayerMessage("All known online users:", sender), false);
-                        for (String user : server.userMap.keySet()) {
-                            sendMsg(new PlayerMessage(user + " on server " + server.userMap.get(user), sender), false);
-                        }
-                        continue;
-                    }
-                    if (input instanceof DisconnectMessage) {
-                        server.out(name + " has disconnected.", this);
-                        completelyClose(false);
                     }
                 } catch (IOException ex) {
                     if (!socket.isClosed()) {
@@ -571,6 +397,178 @@ public class ConvoSyncServer {
                         LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
                     }
                 }
+            }
+        }
+
+        private void processMessage(Message msg) throws IOException {
+            if (msg instanceof PrivateMessage) {
+                out((PrivateMessage) msg, this);
+                return;
+            }
+            if (msg instanceof PlayerMessage) {
+                out((PlayerMessage) msg, this);
+                return;
+            }
+            if (msg instanceof ChatMessage) {
+                if (prefix || type == ClientType.APPLICATION) {
+                    if (chatColor == '\u0000') {
+                        out("[" + name + "] " + ((ChatMessage) msg).MSG, this);
+                    } else {
+                        out("[" + COLOR_CHAR + chatColor
+                                + name + COLOR_CHAR + "f] " + ((ChatMessage) msg).MSG, this);
+                    }
+                } else {
+                    out((ChatMessage) msg, this);
+                }
+                return;
+            }
+            if (msg instanceof CommandMessage) {
+                if (type == ClientType.APPLICATION) {
+                    if (getUser(name).op) {
+                        out((CommandMessage) msg, this);
+                    } else {
+                        sendMsg(new PlayerMessage(
+                                "You don't have permission to use cross-server commands.",
+                                name), false);
+                    }
+                } else {
+                    out((CommandMessage) msg, this);
+                }
+                return;
+            }
+            if (msg instanceof PlayerListMessage) {
+                PlayerListMessage list = (PlayerListMessage) msg;
+                if (list.JOIN) {
+                    for (String element : list.LIST) {
+                        if (userMap.get(element) != null) {
+                            out(new PlayerMessage(
+                                    "You cannot be logged into the client and the game simultaneously.",
+                                    element), this);
+                            Client client = getClient(element);
+                            if (client == null) {
+                                LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
+                                        + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
+                                        element);
+                            } else {
+                                getClient(element).close(true, true);
+                            }
+                        }
+                        userMap.put(element, localname);
+                    }
+                } else {
+                    for (String element : list.LIST) {
+                        userMap.remove(element);
+                    }
+                }
+                sendPlayerListUpdate();
+                return;
+            }
+            if (msg instanceof PluginAuthenticationRequest) {
+                PluginAuthenticationRequest authReq = (PluginAuthenticationRequest) msg;
+                name = authReq.NAME;
+                localname = format(name);
+                type = ClientType.PLUGIN;
+                version = authReq.VERSION;
+                if (!Main.VERSION.equals(version)) {
+                    LOGGER.log(Level.WARNING,
+                            "Version mismatch: Local version {0}, {1} version {2}",
+                            new Object[]{Main.VERSION, localname, version});
+                }
+                auth = authReq.PASSWORD.equals(pluginPassword);
+                sendMsg(new AuthenticationRequestResponse(auth,
+                        AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
+                        Main.VERSION), true);
+                for (String element : authReq.PLAYERS) {
+                    if (userMap.get(element) != null) {
+                        out(new PlayerMessage(
+                                "You cannot be logged into the client and the game simultaneously.",
+                                element), this);
+                        getClient(element).close(true, true);
+                    }
+                    userMap.put(element, localname);
+                }
+                out(name + " has connected.", this);
+                sendPlayerListUpdate();
+                return;
+            }
+            if (msg instanceof ApplicationAuthenticationRequest) {
+                type = ClientType.APPLICATION;
+                AuthenticationRequestResponse.Reason reason = null;
+                ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) msg;
+                version = authReq.VERSION;
+                if (!Main.VERSION.equals(version)) {
+                    LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, authReq.NAME, version});
+                }
+                User user = getUser(authReq.NAME);
+                if (user == null) {
+                    reason = AuthenticationRequestResponse.Reason.INVALID_USER;
+                } else {
+                    if (authReq.PASSWORD.equals(user.PASSWORD)) {
+                        if (banlist.contains(authReq.NAME)) {
+                            reason = AuthenticationRequestResponse.Reason.BANNED;
+                        } else {
+                            if (userMap.get(authReq.NAME) == null) {
+                                auth = true;
+                            } else {
+                                reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
+                            }
+                        }
+                    } else {
+                        reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
+                    }
+                }
+                sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
+                if (auth) {
+                    localname = (name = authReq.NAME);
+                    sendMsg(new PlayerListUpdate(
+                            userMap.keySet().toArray(
+                            new String[userMap.keySet().size()])), false);
+                    out(name + " has joined.", this);
+                    userMap.put(name, "CS-Client");
+                    sendPlayerListUpdate();
+                }
+                return;
+            }
+            if (msg instanceof SetEnabledProperty) {
+                enabled = ((SetEnabledProperty) msg).ENABLED;
+                out(name + " has " + (enabled ? "enabled" : "disabled")
+                        + " cross-server chat due to " + (enabled ? "reduced" : "high")
+                        + " player count.", this);
+                if (!enabled) {
+                    out("This doesn't affect cross-server private messages or commands.", this);
+                }
+                return;
+            }
+            if (msg instanceof UserRegistration) {
+                UserRegistration reg = (UserRegistration) msg;
+                if (isUserRegistered(reg.USER)) {
+                    users.remove(getUser(reg.USER));
+                }
+                users.add(new User(reg));
+                sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
+                return;
+            }
+            if (msg instanceof UserPropertyChange) {
+                UserPropertyChange prop = (UserPropertyChange) msg;
+                switch (prop.PROPERTY) {
+                    case PASSWORD:
+                        users.remove(getUser(name));
+                        users.add(new User(new UserRegistration(name, prop.VALUE)));
+                        sendMsg(new PlayerMessage("Password changed.", name), false);
+                        break;
+                }
+                return;
+            }
+            if (msg instanceof UserListRequest) {
+                String sender = ((UserListRequest) msg).SENDER;
+                sendMsg(new PlayerMessage("All known online users:", sender), false);
+                for (String user : userMap.keySet()) {
+                    sendMsg(new PlayerMessage(user + " on server " + userMap.get(user), sender), false);
+                }
+                return;
+            }
+            if (msg instanceof DisconnectMessage) {
+                out(name + " has disconnected.", this);
             }
         }
 
@@ -603,21 +601,19 @@ public class ConvoSyncServer {
             sendMsg(new DisconnectMessage(), true);
             socket.close();
             if (kick) {
-                server.out(name + " has been kicked.", this);
+                out(name + " has been kicked.", this);
             }
             if (type == ClientType.PLUGIN) {
-                server.userMap.values().removeAll(Collections.singleton(localname));
+                userMap.values().removeAll(Collections.singleton(localname));
             } else {
-                server.userMap.remove(name);
+                userMap.remove(name);
             }
-            server.notify(new PlayerListUpdate(
-                    server.userMap.keySet().toArray(
-                    new String[server.userMap.size()])), ClientType.APPLICATION);
+            sendPlayerListUpdate();
         }
 
         private synchronized void completelyClose(boolean msg) throws IOException {
             close(false, msg);
-            server.clients.remove(this);
+            clients.remove(this);
         }
 
         @Override
@@ -893,33 +889,31 @@ public class ConvoSyncServer {
         return null;
     }
 
-    private static class InputThread extends Thread {
-
-        private ConvoSyncServer server;
-
-        private InputThread(ConvoSyncServer server) {
-            this.server = server;
-        }
+    private class InputTask implements Runnable {
 
         @Override
         public void run() {
             String input;
-            while (server.open || server.alive()) {
+            while (open || alive()) {
                 try {
-                    input = server.in.nextLine();
+                    input = in.nextLine();
                     if (input != null && input.length() > 0) {
                         if (input.charAt(0) == '/') {
                             int delim = input.indexOf(" ");
                             Command cmd;
                             try {
-                                cmd = Command.valueOf((delim > 0 ? input.substring(0, delim) : input).substring(1).toUpperCase());
+                                cmd = Command.valueOf((delim > 0
+                                        ? input.substring(0, delim)
+                                        : input).substring(1).toUpperCase());
                             } catch (IllegalArgumentException ex) {
                                 cmd = Command.HELP;
                             }
-                            String[] args = delim > 0 ? input.substring(delim + 1).split(" ") : new String[0];
-                            server.dispatchCommand(cmd, args);
+                            String[] args = delim > 0
+                                    ? input.substring(delim + 1).split(" ")
+                                    : new String[0];
+                            dispatchCommand(cmd, args);
                         } else {
-                            server.out("<" + COLOR_CHAR + "5" + server.name + COLOR_CHAR + "f> " + input, null);
+                            out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                         }
                     }
                 } catch (Exception ex) {
@@ -929,27 +923,20 @@ public class ConvoSyncServer {
         }
     }
 
-    private static class ConnectionAcceptionThread extends Thread {
-
-        private ConvoSyncServer server;
-
-        private ConnectionAcceptionThread(ConvoSyncServer server) {
-            this.server = server;
-        }
+    private class ConnectionAcceptionTask implements Runnable {
 
         @Override
         public void run() {
             Socket clientSocket;
             Client client;
-            while (server.open) {
+            while (open) {
                 try {
-                    clientSocket = server.socket.accept();
+                    clientSocket = socket.accept();
                     client = new Client(clientSocket);
-                    synchronized (server.clients) {
-                        server.clients.add(client);
+                    synchronized (clients) {
+                        clients.add(client);
                     }
-                    client.server = server;
-                    client.start();
+                    new Thread(client).start();
                     LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
                 } catch (IOException ex) {
                     // ignore

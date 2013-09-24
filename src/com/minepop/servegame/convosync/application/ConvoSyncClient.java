@@ -155,7 +155,7 @@ public final class ConvoSyncClient {
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
             out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
-            new InputThread(this).start();
+            new Thread(new InputTask()).start();
             LOGGER.log(Level.INFO, "{0}", socket);
             gui.cls();
             gui.setVisible(true);
@@ -200,91 +200,87 @@ public final class ConvoSyncClient {
         return "ConvoSyncClient " + Main.VERSION;
     }
 
-    private static class InputThread extends Thread {
-
-        private ConvoSyncClient client;
-
-        private InputThread(ConvoSyncClient client) {
-            this.client = client;
-        }
+    private class InputTask implements Runnable {
 
         @Override
         public void run() {
             Object input;
-            while (client.connected) {
+            while (connected) {
                 try {
-                    input = client.in.readObject();
+                    input = in.readObject();
                     LOGGER.log(Level.FINER, "Input: {0}", input);
-                    if (!(input instanceof Message)) {
-                        LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
-                        continue;
-                    }
                     if (input instanceof Message) {
-                        if (input instanceof PrivateMessage) {
-                            PrivateMessage pm = (PrivateMessage) input;
-                            client.gui.log("[[" + pm.SERVER + "] " + pm.SENDER + "] -> me] " + pm.MSG);
-                            client.out(new PlayerMessage("[me -> [CS-Client] " + client.name + "]] " + pm.MSG, pm.SENDER));
-                            continue;
-                        }
-                        if (input instanceof PlayerMessage) {
-                            client.gui.log(((PlayerMessage) input).MSG);
-                            continue;
-                        }
-                        if (input instanceof ChatMessage) {
-                            client.gui.log(((ChatMessage) input).MSG);
-                            continue;
-                        }
-                        if (input instanceof PlayerListUpdate) {
-                            PlayerListUpdate update = (PlayerListUpdate) input;
-                            client.gui.clearUserList();
-                            for (String elem : update.LIST) {
-                                if (!elem.equals(client.name)) {
-                                    client.gui.addToUserList(elem);
-                                }
-                            }
-                            continue;
-                        }
-                        if (input instanceof AuthenticationRequestResponse) {
-                            AuthenticationRequestResponse response = (AuthenticationRequestResponse) input;
-                            client.auth = response.AUTH;
-                            if (!Main.VERSION.equals(response.VERSION)) {
-                                client.gui.log("Version mismatch: Local version " + Main.VERSION + ", ConvoSync server version " + response.VERSION);
-                            }
-                            if (client.auth) {
-                                client.gui.log("Connected.");
-                            } else {
-                                switch (((AuthenticationRequestResponse) input).REASON) {
-                                    case INVALID_USER:
-                                        client.gui.log("Invalid user name.");
-                                        break;
-                                    case INVALID_PASSWORD:
-                                        client.gui.log("Invalid password.");
-                                        break;
-                                    case LOGGED_IN:
-                                        client.gui.log("You're already logged in.");
-                                        break;
-                                }
-                                client.password = null;
-                                client.disconnect(true);
-                                new LoginGUI(client, client.ip, client.port, client.name, null, false).setVisible(true);
-                            }
-                            continue;
-                        }
-                        if (input instanceof DisconnectMessage) {
-                            client.gui.log("The server has disconnected you.");
-                            client.disconnect(false);
-                            continue;
-                        }
+                        processMessage((Message) input);
+                    } else {
+                        LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
                     }
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, null, ex);
-                    client.connected = false;
-                    client.gui.log("Connection lost.");
+                    connected = false;
+                    gui.log("Connection lost.");
                     continue;
                 } catch (ClassNotFoundException ex) {
                     LOGGER.log(Level.SEVERE, "Fatal error.", ex);
                     System.exit(-1);
                 }
+            }
+        }
+    }
+
+    private void processMessage(Message msg) {
+        if (msg instanceof PrivateMessage) {
+            PrivateMessage pmsg = (PrivateMessage) msg;
+            gui.log("[[" + pmsg.SERVER + "] " + pmsg.SENDER + "] -> me] " + pmsg.MSG);
+            out(new PlayerMessage("[me -> [CS-Client] " + name + "]] " + pmsg.MSG, pmsg.SENDER));
+            return;
+        }
+        if (msg instanceof PlayerMessage) {
+            gui.log(((PlayerMessage) msg).MSG);
+            return;
+        }
+        if (msg instanceof ChatMessage) {
+            gui.log(((ChatMessage) msg).MSG);
+            return;
+        }
+        if (msg instanceof PlayerListUpdate) {
+            PlayerListUpdate update = (PlayerListUpdate) msg;
+            gui.clearUserList();
+            for (String elem : update.LIST) {
+                if (!elem.equals(name)) {
+                    gui.addToUserList(elem);
+                }
+            }
+            return;
+        }
+        if (msg instanceof AuthenticationRequestResponse) {
+            AuthenticationRequestResponse response = (AuthenticationRequestResponse) msg;
+            auth = response.AUTH;
+            if (!Main.VERSION.equals(response.VERSION)) {
+                gui.log("Version mismatch: Local version " + Main.VERSION
+                        + ", ConvoSync server version " + response.VERSION);
+            }
+            if (auth) {
+                gui.log("Connected.");
+            } else {
+                switch (((AuthenticationRequestResponse) msg).REASON) {
+                    case INVALID_USER:
+                        gui.log("Invalid user name.");
+                        break;
+                    case INVALID_PASSWORD:
+                        gui.log("Invalid password.");
+                        break;
+                    case LOGGED_IN:
+                        gui.log("You're already logged in.");
+                        break;
+                }
+                password = null;
+                disconnect(true);
+                new LoginGUI(this, ip, port, name, null, false).setVisible(true);
+                return;
+            }
+            if (msg instanceof DisconnectMessage) {
+                gui.log("The server has disconnected you.");
+                disconnect(false);
             }
         }
     }
