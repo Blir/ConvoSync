@@ -43,7 +43,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     protected boolean connected, shouldBe = true, auth, isEss;
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
     private List<User> users = new ArrayList<User>();
-    private AFKThread afkThread;
+    private EssentialsThread essThread;
 
     @Override
     public void onEnable() {
@@ -331,7 +331,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAsyncPlayerChat(AsyncPlayerChatEvent evt) {
-        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
+        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled && (!getServer().getPluginManager().isPluginEnabled("Essentials") || essThread.chat(evt))) {
             out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
                     .replace("%2$s", evt.getMessage()), false);
         }
@@ -379,7 +379,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         if (getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getQuitMessage(), false);
         }
-        afkThread.remove(evt.getPlayer().getName());
+        essThread.remove(evt.getPlayer().getName());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -405,8 +405,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
         out(new PluginAuthenticationRequest(getServer().getServerName(), password, Main.VERSION, list), true);
         new InputThread(this).start();
         if (getServer().getPluginManager().isPluginEnabled("Essentials") && getConfig().getBoolean("notif.afk")) {
-            afkThread = new AFKThread(this);
-            afkThread.start();
+            essThread = new EssentialsThread(this);
+            essThread.start();
         }
         getLogger().info(socket.toString());
     }
