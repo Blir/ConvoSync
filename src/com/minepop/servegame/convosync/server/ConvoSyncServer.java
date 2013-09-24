@@ -449,15 +449,21 @@ public class ConvoSyncServer {
                         type = ClientType.PLUGIN;
                         version = authReq.VERSION;
                         if (!Main.VERSION.equals(version)) {
-                            LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, localname, version});
+                            LOGGER.log(Level.WARNING,
+                                    "Version mismatch: Local version {0}, {1} version {2}",
+                                    new Object[]{Main.VERSION, localname, version});
                         }
                         auth = authReq.PASSWORD.equals(server.pluginPassword);
-                        sendMsg(new AuthenticationRequestResponse(auth, AuthenticationRequestResponse.Reason.INVALID_PASSWORD, Main.VERSION), true);
-                        server.notify(new PlayerListMessage(authReq.PLAYERS, true), ClientType.APPLICATION);
+                        sendMsg(new AuthenticationRequestResponse(auth,
+                                AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
+                                Main.VERSION), true);
+                        server.notify(new PlayerListMessage(authReq.PLAYERS, true),
+                                ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
                                 server.out(new PlayerMessage(
-                                        "You cannot be logged into the client and the game simultaneously.", element), this);
+                                        "You cannot be logged into the client and the game simultaneously.",
+                                        element), this);
                                 server.getClient(element).close(true);
                             }
                             server.userMap.put(element, localname);
@@ -496,8 +502,7 @@ public class ConvoSyncServer {
                             localname = (name = authReq.NAME);
                             sendMsg(new PlayerListMessage(
                                     server.userMap.keySet().toArray(
-                                    new String[server.userMap.keySet().size()])
-                                    , true), false);
+                                    new String[server.userMap.keySet().size()]), true), false);
                             server.notify(new PlayerListMessage(name, true), ClientType.APPLICATION);
                             server.out(name + " has joined.", this);
                             server.userMap.put(name, "CS-Client");
@@ -552,11 +557,6 @@ public class ConvoSyncServer {
                     }
                 } catch (IOException ex) {
                     alive = false;
-                    if (server.open) {
-                        synchronized (server.clients) {
-                            server.clients.remove(this);
-                        }
-                    }
                     if (!socket.isClosed()) {
                         try {
                             socket.close();
@@ -566,11 +566,6 @@ public class ConvoSyncServer {
                     }
                 } catch (ClassNotFoundException ex) {
                     alive = false;
-                    if (server.open) {
-                        synchronized (server.clients) {
-                            server.clients.remove(this);
-                        }
-                    }
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
                     try {
                         socket.close();
@@ -953,10 +948,8 @@ public class ConvoSyncServer {
                     client.server = server;
                     client.start();
                     LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
-                } catch (Exception ex) {
-                    if (!server.socket.isClosed()) {
-                        LOGGER.log(Level.SEVERE, "Error accepting a connection!", ex);
-                    }
+                } catch (IOException ex) {
+                    // ignore
                 }
             }
         }
