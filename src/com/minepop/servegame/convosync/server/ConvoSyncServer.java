@@ -220,7 +220,7 @@ public class ConvoSyncServer {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             for (Client client : clients) {
-                client.close(false);
+                client.close(false, true);
             }
         } finally {
             try {
@@ -427,7 +427,7 @@ public class ConvoSyncServer {
                                                 + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
                                                 element);
                                     } else {
-                                        server.getClient(element).close(true);
+                                        server.getClient(element).close(true, true);
                                     }
                                 }
                                 server.userMap.put(element, localname);
@@ -463,7 +463,7 @@ public class ConvoSyncServer {
                                 server.out(new PlayerMessage(
                                         "You cannot be logged into the client and the game simultaneously.",
                                         element), this);
-                                server.getClient(element).close(true);
+                                server.getClient(element).close(true, true);
                             }
                             server.userMap.put(element, localname);
                         }
@@ -553,7 +553,7 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
-                        completelyClose();
+                        completelyClose(false);
                     }
                 } catch (IOException ex) {
                     if (!socket.isClosed()) {
@@ -598,7 +598,7 @@ public class ConvoSyncServer {
             }
         }
 
-        private void close(boolean kick) throws IOException {
+        private void close(boolean kick, boolean msg) throws IOException {
             alive = false;
             sendMsg(new DisconnectMessage(), true);
             socket.close();
@@ -615,8 +615,8 @@ public class ConvoSyncServer {
                     new String[server.userMap.size()])), ClientType.APPLICATION);
         }
 
-        private synchronized void completelyClose() throws IOException {
-            close(false);
+        private synchronized void completelyClose(boolean msg) throws IOException {
+            close(false, msg);
             server.clients.remove(this);
         }
 
@@ -736,7 +736,7 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.completelyClose();
+                            client.completelyClose(true);
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
@@ -818,7 +818,7 @@ public class ConvoSyncServer {
                         Client client = getClient(args[1]);
                         if (client != null) {
                             try {
-                                client.close(true);
+                                client.close(true, true);
                             } catch (IOException ex) {
                                 LOGGER.log(Level.INFO, "Error closing client.", ex);
                             }
