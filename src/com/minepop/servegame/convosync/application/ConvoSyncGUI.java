@@ -15,7 +15,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
     private ConvoSyncClient client;
     private javax.swing.DefaultListModel<String> model;
-    final Calendar CAL;
+    private final Calendar CAL;
 
     /**
      * Creates new form ConvoSyncGUI
@@ -222,7 +222,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onUserListSelection
 
     private void windowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_windowClosing
-        client.disconnect();
+        client.disconnect(true);
     }//GEN-LAST:event_windowClosing
 
     private void onReconnect(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onReconnect

@@ -116,7 +116,7 @@ public final class ConvoSyncClient {
     }
 
     protected String reconnect() {
-        disconnect();
+        disconnect(true);
         return connect();
     }
 
@@ -148,7 +148,6 @@ public final class ConvoSyncClient {
     private String connect() {
         try {
             gui.clearUserList();
-            //model.addElement("SERVER");
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
             socket = new Socket(ip, port);
             System.out.println(socket);
@@ -156,7 +155,6 @@ public final class ConvoSyncClient {
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
             out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
-            final ConvoSyncClient client = this;
             new InputThread(this).start();
             LOGGER.log(Level.INFO, "{0}", socket);
             gui.cls();
@@ -168,9 +166,11 @@ public final class ConvoSyncClient {
         return null;
     }
 
-    protected void disconnect() {
+    protected void disconnect(boolean sendMsg) {
         try {
-            out(new DisconnectMessage());
+            if (sendMsg) {
+                out(new DisconnectMessage());
+            }
             socket.close();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);
@@ -203,11 +203,11 @@ public final class ConvoSyncClient {
     private static class InputThread extends Thread {
 
         private ConvoSyncClient client;
-        
+
         private InputThread(ConvoSyncClient client) {
             this.client = client;
         }
-        
+
         @Override
         public void run() {
             Object input;
@@ -234,17 +234,12 @@ public final class ConvoSyncClient {
                             client.gui.log(((ChatMessage) input).MSG);
                             continue;
                         }
-                        if (input instanceof PlayerListMessage) {
-                            PlayerListMessage list = (PlayerListMessage) input;
-                            if (list.JOIN) {
-                                for (String elem : list.LIST) {
-                                    if (!elem.equals(client.name)) {
-                                        client.gui.addToUserList(elem);
-                                    }
-                                }
-                            } else {
-                                for (String elem : list.LIST) {
-                                    client.gui.removeFromUserList(elem);
+                        if (input instanceof PlayerListUpdate) {
+                            PlayerListUpdate update = (PlayerListUpdate) input;
+                            client.gui.clearUserList();
+                            for (String elem : update.LIST) {
+                                if (!elem.equals(client.name)) {
+                                    client.gui.addToUserList(elem);
                                 }
                             }
                             continue;
@@ -270,14 +265,14 @@ public final class ConvoSyncClient {
                                         break;
                                 }
                                 client.password = null;
-                                client.disconnect();
+                                client.disconnect(true);
                                 new LoginGUI(client, client.ip, client.port, client.name, null, false).setVisible(true);
                             }
                             continue;
                         }
                         if (input instanceof DisconnectMessage) {
                             client.gui.log("The server has disconnected you.");
-                            client.disconnect();
+                            client.disconnect(false);
                             continue;
                         }
                     }

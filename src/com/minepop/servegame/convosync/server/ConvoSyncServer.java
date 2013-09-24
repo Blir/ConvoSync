@@ -107,10 +107,13 @@ public class ConvoSyncServer {
         } catch (InvalidKeySpecException ex) {
             LOGGER.log(Level.SEVERE, "Error decrypting user data.", ex);
         } finally {
-            if (ois != null) {
-                ois.close();
+            try {
+                if (ois != null) {
+                    ois.close();
+                }
+            } finally {
+                decrypted.delete();
             }
-            decrypted.delete();
         }
         try {
             Scanner scanner = new Scanner(new File("banlist.txt"));
@@ -194,7 +197,7 @@ public class ConvoSyncServer {
         new InputThread(this).start();
     }
 
-    private synchronized boolean alive() {
+    private boolean alive() {
         for (Client client : clients) {
             if (client.isAlive() || client.alive) {
                 return true;
@@ -220,11 +223,11 @@ public class ConvoSyncServer {
                 client.close(false);
             }
         } finally {
-            userMap.clear();
-            clients.clear();
             try {
                 socket.close();
             } finally {
+                userMap.clear();
+                clients.clear();
                 if (force) {
                     System.exit(-1);
                 }
@@ -264,19 +267,10 @@ public class ConvoSyncServer {
             format(msg.MSG)});
     }
 
-    private static void debug(String input) {
-        LOGGER.log(Level.FINEST, "Debug info for message: {0}", input);
-        for (int idx = 0; idx < input.length(); idx++) {
-            LOGGER.log(Level.FINEST, "Character {0} : {1} : {2}",
-                    new Object[]{idx, input.charAt(idx),
-                Integer.toHexString(input.charAt(idx) | 0x10000).substring(1)});
-        }
-    }
-
-    private synchronized void notify(PlayerListMessage notification, Client.ClientType type) {
+    private synchronized void notify(PlayerListUpdate update, Client.ClientType type) {
         for (Client client : clients) {
             if (client.type == type && client.auth) {
-                client.sendMsg(notification, false);
+                client.sendMsg(update, false);
             }
         }
     }
@@ -307,6 +301,10 @@ public class ConvoSyncServer {
             return;
         }
         String clientName = userMap.get(msg.RECIPIENT);
+        if (clientName == null) {
+            LOGGER.log(Level.WARNING, "Is {0} a ghost?", msg.RECIPIENT);
+            return;
+        }
         if (clientName.equals("CS-Client")) {
             clientName = msg.RECIPIENT;
         }
@@ -417,7 +415,6 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof PlayerListMessage) {
                         PlayerListMessage msg = (PlayerListMessage) input;
-                        server.notify(msg, ClientType.APPLICATION);
                         if (msg.JOIN) {
                             for (String element : msg.LIST) {
                                 if (server.userMap.get(element) != null) {
@@ -440,6 +437,10 @@ public class ConvoSyncServer {
                                 server.userMap.remove(element);
                             }
                         }
+                        server.notify(new PlayerListUpdate(
+                                server.userMap.keySet().toArray(
+                                new String[server.userMap.size()])),
+                                ClientType.APPLICATION);
                         continue;
                     }
                     if (input instanceof PluginAuthenticationRequest) {
@@ -457,8 +458,6 @@ public class ConvoSyncServer {
                         sendMsg(new AuthenticationRequestResponse(auth,
                                 AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
                                 Main.VERSION), true);
-                        server.notify(new PlayerListMessage(authReq.PLAYERS, true),
-                                ClientType.APPLICATION);
                         for (String element : authReq.PLAYERS) {
                             if (server.userMap.get(element) != null) {
                                 server.out(new PlayerMessage(
@@ -469,6 +468,8 @@ public class ConvoSyncServer {
                             server.userMap.put(element, localname);
                         }
                         server.out(name + " has connected.", this);
+                        server.notify(new PlayerListUpdate(server.userMap.keySet().toArray(new String[server.userMap.size()])),
+                                ClientType.APPLICATION);
                         continue;
                     }
                     if (input instanceof ApplicationAuthenticationRequest) {
@@ -503,9 +504,12 @@ public class ConvoSyncServer {
                             sendMsg(new PlayerListMessage(
                                     server.userMap.keySet().toArray(
                                     new String[server.userMap.keySet().size()]), true), false);
-                            server.notify(new PlayerListMessage(name, true), ClientType.APPLICATION);
                             server.out(name + " has joined.", this);
                             server.userMap.put(name, "CS-Client");
+                            server.notify(new PlayerListUpdate(
+                                    server.userMap.keySet().toArray(
+                                    new String[server.userMap.size()])),
+                                    ClientType.APPLICATION);
                         }
                         continue;
                     }
@@ -549,14 +553,9 @@ public class ConvoSyncServer {
                     }
                     if (input instanceof DisconnectMessage) {
                         server.out(name + " has disconnected.", this);
-                        alive = false;
-                        synchronized (server.clients) {
-                            server.clients.remove(this);
-                        }
-                        close(false);
+                        completelyClose();
                     }
                 } catch (IOException ex) {
-                    alive = false;
                     if (!socket.isClosed()) {
                         try {
                             socket.close();
@@ -565,7 +564,6 @@ public class ConvoSyncServer {
                         }
                     }
                 } catch (ClassNotFoundException ex) {
-                    alive = false;
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
                     try {
                         socket.close();
@@ -610,9 +608,16 @@ public class ConvoSyncServer {
             if (type == ClientType.PLUGIN) {
                 server.userMap.values().removeAll(Collections.singleton(localname));
             } else {
-                server.notify(new PlayerListMessage(name, false), ClientType.APPLICATION);
                 server.userMap.remove(name);
             }
+            server.notify(new PlayerListUpdate(
+                    server.userMap.keySet().toArray(
+                    new String[server.userMap.size()])), ClientType.APPLICATION);
+        }
+
+        private synchronized void completelyClose() throws IOException {
+            close(false);
+            server.clients.remove(this);
         }
 
         @Override
@@ -731,9 +736,7 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            synchronized (clients) {
-                                client.close(true);
-                            }
+                            client.completelyClose();
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
