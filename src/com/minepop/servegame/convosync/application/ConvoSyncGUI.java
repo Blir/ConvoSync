@@ -236,10 +236,10 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             @Override
             public void run() {
                 client.reconnect();
+                setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+                jMenuItem1.setEnabled(true);
             }
         }).start();
-        setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-        jMenuItem1.setEnabled(true);
     }//GEN-LAST:event_onReconnect
 
     private void onClearOutput(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onClearOutput
