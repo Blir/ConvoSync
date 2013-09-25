@@ -568,8 +568,8 @@ public class ConvoSyncServer {
                 return;
             }
             if (msg instanceof DisconnectMessage) {
-                out(name + " has disconnected.", this);
                 completelyClose(false);
+                out(name + " has disconnected.", this);
             }
         }
 
@@ -586,6 +586,10 @@ public class ConvoSyncServer {
         }
 
         private void sendMsg(Object obj) {
+            if (!alive) {
+                LOGGER.log(Level.WARNING, "Tried to write to a dead client!");
+                return;
+            }
             try {
                 out.writeObject(obj);
                 out.flush();
@@ -615,7 +619,9 @@ public class ConvoSyncServer {
         }
 
         private void completelyClose(boolean msg) throws IOException {
-            clients.remove(this);
+            synchronized (clients) {
+                clients.remove(this);
+            }
             close(false, msg);
         }
 
