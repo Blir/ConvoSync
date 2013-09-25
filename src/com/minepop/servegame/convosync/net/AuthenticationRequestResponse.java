@@ -23,6 +23,6 @@ public class AuthenticationRequestResponse extends Message {
 
     @Override
     public String toString() {
-        return "AuthenticationRequestResponse[" + AUTH + "," + VERSION + "]";
+        return "AuthenticationRequestResponse[" + AUTH + "," + VERSION + "," + REASON + "]";
     }
 }

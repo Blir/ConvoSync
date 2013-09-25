@@ -22,6 +22,7 @@ public final class ConvoSyncClient {
     private int port;
     private Socket socket;
     protected boolean pm, connected, auth;
+    private boolean remember;
     private ObjectInputStream in;
     private ObjectOutputStream out;
     private static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
@@ -87,7 +88,6 @@ public final class ConvoSyncClient {
             }
         }
         gui = new ConvoSyncGUI(this);
-        boolean remember = false;
         try {
             FileInputStream fis = null;
             try {
@@ -275,7 +275,7 @@ public final class ConvoSyncClient {
                 }
                 password = null;
                 disconnect(true);
-                new LoginGUI(this, ip, port, name, null, false).setVisible(true);
+                new LoginGUI(this, ip, port, name, null, remember).setVisible(true);
                 return;
             }
             if (msg instanceof DisconnectMessage) {

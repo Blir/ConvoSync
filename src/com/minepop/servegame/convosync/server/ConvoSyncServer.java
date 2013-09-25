@@ -569,6 +569,7 @@ public class ConvoSyncServer {
             }
             if (msg instanceof DisconnectMessage) {
                 out(name + " has disconnected.", this);
+                completelyClose(false);
             }
         }
 
@@ -613,14 +614,14 @@ public class ConvoSyncServer {
             sendPlayerListUpdate();
         }
 
-        private synchronized void completelyClose(boolean msg) throws IOException {
+        private void completelyClose(boolean msg) throws IOException {
             close(false, msg);
             clients.remove(this);
         }
 
         @Override
         public String toString() {
-            return "Client[" + localname + "," + version + "," + socket + "," + super.toString() + "]";
+            return "Client[" + localname + "," + version + "," + socket + "]";
         }
     }
 
