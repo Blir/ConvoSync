@@ -24,13 +24,13 @@ import javax.crypto.NoSuchPaddingException;
  */
 public class ConvoSyncServer {
 
-    private enum Command {
+    private static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
         USERS, NAME, HELP, DEBUG
     }
 
-    private enum SubCommand {
+    private static enum SubCommand {
 
         OP, LIST, UNREGISTER
     }

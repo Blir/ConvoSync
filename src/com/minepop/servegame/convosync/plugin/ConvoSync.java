@@ -31,7 +31,7 @@ import static com.minepop.servegame.convosync.Main.format;
  */
 public class ConvoSync extends JavaPlugin implements Listener {
 
-    private enum Action {
+    private static enum Action {
 
         SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS
     }
@@ -321,7 +321,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 "cabbage", "redhat", "pinkypie", "fluttershy", "badwolf",
                 "iPassword", "tuesday", "tardis", "mycroft", "cafebabe",
                 "steve", "herobrine", "creeper", "cthulhu", "zezima", "zelda",
-                "hyrule"}[rng.nextInt(7)]);
+                "hyrule"}[rng.nextInt(21)]);
             for (int idx = 0; idx < 4; idx++) {
                 sb.append((char) (rng.nextInt(10) + 48));
             }
