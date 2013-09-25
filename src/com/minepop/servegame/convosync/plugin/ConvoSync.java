@@ -318,8 +318,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
             Random rng = new Random();
             StringBuilder sb = new StringBuilder(
                     new String[]{"poptarts", "fedora", "oops", "potato"}[rng.nextInt(4)]);
-            int length = rng.nextInt(4);
-            for (int idx = 0; idx < length; idx++) {
+            for (int idx = 0; idx < 4; idx++) {
                 sb.append((char) (rng.nextInt(10) + 48));
             }
             out(new UserRegistration(sender.getName(), sb.toString()), false);
