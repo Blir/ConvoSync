@@ -447,7 +447,7 @@ public class ConvoSyncServer {
                             Client client = getClient(element);
                             if (client == null) {
                                 LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                        + "\nAre they logged onto two Minecraft servers connected to this ConvoSyncServer?",
+                                        + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
                                         element);
                             } else {
                                 getClient(element).close(true, true);
@@ -573,7 +573,11 @@ public class ConvoSyncServer {
                 } catch (ConcurrentModificationException ex) {
                     LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
                 }
-                out(name + " has disconnected.", this);
+                try {
+                    out(name + " has disconnected.", this);
+                } catch (ConcurrentModificationException ex) {
+                    LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
+                }
             }
         }
 

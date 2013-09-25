@@ -156,7 +156,6 @@ public final class ConvoSyncClient {
             out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
             new Thread(new InputTask()).start();
             LOGGER.log(Level.INFO, "{0}", socket);
-            gui.cls();
             gui.setVisible(true);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, ex.toString());
