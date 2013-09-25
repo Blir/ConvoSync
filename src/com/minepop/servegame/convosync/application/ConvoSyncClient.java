@@ -165,6 +165,8 @@ public final class ConvoSyncClient {
     }
 
     protected void disconnect(boolean sendMsg) {
+        auth = false;
+        connected = false;
         try {
             if (sendMsg) {
                 out(new DisconnectMessage());
