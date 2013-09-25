@@ -400,7 +400,7 @@ public class ConvoSyncServer {
             }
         }
 
-        private void processMessage(Message msg) throws IOException {
+        private synchronized void processMessage(Message msg) throws IOException {
             if (msg instanceof PrivateMessage) {
                 out((PrivateMessage) msg, this);
                 return;
@@ -568,7 +568,11 @@ public class ConvoSyncServer {
                 return;
             }
             if (msg instanceof DisconnectMessage) {
-                completelyClose(false);
+                try {
+                    completelyClose(false);
+                } catch (ConcurrentModificationException ex) {
+                    LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
+                }
                 out(name + " has disconnected.", this);
             }
         }

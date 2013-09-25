@@ -150,7 +150,6 @@ public final class ConvoSyncClient {
             gui.clearUserList();
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
             socket = new Socket(ip, port);
-            System.out.println(socket);
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
@@ -218,7 +217,6 @@ public final class ConvoSyncClient {
                     LOGGER.log(Level.SEVERE, null, ex);
                     connected = false;
                     gui.log("Connection lost.");
-                    continue;
                 } catch (ClassNotFoundException ex) {
                     LOGGER.log(Level.SEVERE, "Fatal error.", ex);
                     System.exit(-1);

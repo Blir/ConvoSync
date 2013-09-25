@@ -17,6 +17,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private ConvoSyncClient client;
     private javax.swing.DefaultListModel<String> model;
     private final Calendar CAL;
+    private boolean busy;
 
     /**
      * Creates new form ConvoSyncGUI
@@ -230,14 +231,21 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_windowClosing
 
     private void onReconnect(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onReconnect
-        jMenuItem1.setEnabled(false);
+        if (busy) {
+            return;
+        }
+        if (!client.auth) {
+            log("You are not authenticated.");
+            return;
+        }
+        busy = true;
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         new Thread(new Runnable() {
             @Override
             public void run() {
                 client.reconnect();
                 setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
-                jMenuItem1.setEnabled(true);
+                busy = false;
             }
         }).start();
     }//GEN-LAST:event_onReconnect
@@ -323,7 +331,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }
 
     public void cls() {
-        input.setText("");
+        output.setText("");
     }
 
     public boolean useTimeStamps() {

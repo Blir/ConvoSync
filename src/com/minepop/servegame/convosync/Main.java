@@ -12,7 +12,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.3 Dev 6.9";
+    public static final String VERSION = "1.0.3 Dev 6.10";
 
     public static enum Action {
 
