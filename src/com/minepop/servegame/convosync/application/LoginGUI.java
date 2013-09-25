@@ -164,7 +164,7 @@ public class LoginGUI extends javax.swing.JFrame {
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         jProgressBar1.setIndeterminate(true);
         jLabel4.setText("Connecting...");
-        new Thread(new ConnectTask(getCursor())).start();
+        new Thread(new ConnectTask()).start();
     }//GEN-LAST:event_onLogin
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
@@ -181,12 +181,6 @@ public class LoginGUI extends javax.swing.JFrame {
 
     private class ConnectTask implements Runnable {
 
-        private Cursor preCursor;
-        
-        private ConnectTask(Cursor preCursor) {
-            this.preCursor = preCursor;
-        }
-        
         @Override
         public void run() {
             client.name = jTextField2.getText();
@@ -216,7 +210,7 @@ public class LoginGUI extends javax.swing.JFrame {
             } else {
                 jLabel4.setText(msg);
             }
-            setCursor(preCursor);
+            setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
             jProgressBar1.setIndeterminate(false);
         }
     }

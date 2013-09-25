@@ -5,6 +5,7 @@ import blir.swing.quickgui.MsgBox;
 import blir.swing.quickgui.NewPasswordBox;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+import java.awt.Cursor;
 import java.util.Calendar;
 
 /**
@@ -229,7 +230,16 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_windowClosing
 
     private void onReconnect(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onReconnect
-        client.reconnect();
+        jMenuItem1.setEnabled(false);
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                client.reconnect();
+            }
+        }).start();
+        setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+        jMenuItem1.setEnabled(true);
     }//GEN-LAST:event_onReconnect
 
     private void onClearOutput(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onClearOutput
