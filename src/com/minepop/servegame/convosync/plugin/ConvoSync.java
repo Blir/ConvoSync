@@ -317,7 +317,11 @@ public class ConvoSync extends JavaPlugin implements Listener {
             }
             Random rng = new Random();
             StringBuilder sb = new StringBuilder(
-                    new String[]{"poptarts", "fedora", "oops", "potato"}[rng.nextInt(4)]);
+                    new String[]{"poptarts", "fedora", "oops", "potato",
+                "cabbage", "redhat", "pinkypie", "fluttershy", "badwolf",
+                "iPassword", "tuesday", "tardis", "mycroft", "cafebabe",
+                "steve", "herobrine", "creeper", "cthulhu", "zezima", "zelda",
+                "hyrule"}[rng.nextInt(7)]);
             for (int idx = 0; idx < 4; idx++) {
                 sb.append((char) (rng.nextInt(10) + 48));
             }

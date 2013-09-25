@@ -615,8 +615,8 @@ public class ConvoSyncServer {
         }
 
         private void completelyClose(boolean msg) throws IOException {
-            close(false, msg);
             clients.remove(this);
+            close(false, msg);
         }
 
         @Override
