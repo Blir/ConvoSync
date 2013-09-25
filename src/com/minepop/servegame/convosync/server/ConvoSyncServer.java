@@ -618,10 +618,8 @@ public class ConvoSyncServer {
             sendPlayerListUpdate();
         }
 
-        private void completelyClose(boolean msg) throws IOException {
-            synchronized (clients) {
-                clients.remove(this);
-            }
+        private synchronized void completelyClose(boolean msg) throws IOException {
+            clients.remove(this);
             close(false, msg);
         }
 
