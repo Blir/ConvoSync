@@ -12,13 +12,13 @@ public class PluginAuthenticationRequest extends AuthenticationRequest {
     
     public final String[] PLAYERS;
     
-    public PluginAuthenticationRequest(String name, String password, String[] players) {
-        super(name, password);
+    public PluginAuthenticationRequest(String name, String password, String version, String[] players) {
+        super(name, password, version);
         this.PLAYERS = players;
     }
     
     @Override
     public String toString() {
-        return "PluginAuthenticationRequest[" + NAME + "]";
+        return "PluginAuthenticationRequest[" + NAME + "," + VERSION + "]";
     }
 }

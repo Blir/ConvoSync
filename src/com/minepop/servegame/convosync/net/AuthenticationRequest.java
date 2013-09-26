@@ -6,15 +6,16 @@ package com.minepop.servegame.convosync.net;
  */
 public class AuthenticationRequest extends Message {
 
-    public final String NAME, PASSWORD;
+    public final String NAME, PASSWORD, VERSION;
 
-    public AuthenticationRequest(String name, String password) {
+    public AuthenticationRequest(String name, String password, String version) {
         this.NAME = name;
         this.PASSWORD = password;
+        this.VERSION = version;
     }
     
     @Override
     public String toString() {
-        return "AuthenticationRequest[" + NAME + "]";
+        return "AuthenticationRequest[" + NAME + "," + VERSION + "]";
     }
 }

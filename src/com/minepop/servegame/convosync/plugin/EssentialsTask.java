@@ -5,19 +5,20 @@ import java.util.ArrayList;
 import java.util.List;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.Plugin;
 
 /**
  *
  * @author Blir
  */
-public class AFKThread extends Thread {
+public class EssentialsTask implements Runnable {
 
     private ConvoSync plugin;
     private Essentials ess;
     private List<User> users = new ArrayList<User>();
 
-    protected AFKThread(ConvoSync plugin) {
+    protected EssentialsTask(ConvoSync plugin) {
         this.plugin = plugin;
         Plugin prospective = plugin.getServer().getPluginManager().getPlugin("Essentials");
         if (prospective != null && prospective instanceof Essentials) {
@@ -39,7 +40,9 @@ public class AFKThread extends Thread {
                 User csuser = getUser(user);
                 if (user.isAfk() != csuser.afk) {
                     csuser.afk = user.isAfk();
-                    plugin.out(user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
+                    if (!user.isVanished()) {
+                        plugin.out(user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
+                    }
                 }
             }
             try {
@@ -62,6 +65,23 @@ public class AFKThread extends Thread {
         csuser.afk = user.isAfk();
         users.add(csuser);
         return csuser;
+    }
+
+    private User getUser(String name) {
+        for (User user : users) {
+            if (user.name.equals(name)) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    public void remove(String name) {
+        users.remove(getUser(name));
+    }
+    
+    public boolean chat(AsyncPlayerChatEvent evt) {
+        return !ess.getUser(evt.getPlayer().getName()).isVanished();
     }
 
     private static class User {

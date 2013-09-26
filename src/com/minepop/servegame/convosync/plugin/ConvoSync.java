@@ -1,5 +1,6 @@
 package com.minepop.servegame.convosync.plugin;
 
+import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -7,6 +8,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -21,6 +23,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import static com.minepop.servegame.convosync.Main.format;
 
 /**
  *
@@ -28,9 +31,9 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public class ConvoSync extends JavaPlugin implements Listener {
 
-    private enum Action {
+    private static enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS, VERSION
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -40,6 +43,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
     protected boolean connected, shouldBe = true, auth, isEss;
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
     private List<User> users = new ArrayList<User>();
+    private EssentialsTask essTask;
+    private final ConvoSync PLUGIN = this;
 
     @Override
     public void onEnable() {
@@ -49,9 +54,12 @@ public class ConvoSync extends JavaPlugin implements Listener {
             password = getConfig().getString("password");
             max = getConfig().getInt("max-players");
         } catch (NumberFormatException ex) {
+            getLogger().warning("Improper config.");
         } catch (NullPointerException ex) {
+            getLogger().warning("Improper config.");
         }
-        if (ip == null || ip.equals("null") || port == 0 || password == null || password.equals("null") || ip.equals("X") || password.equals("X")) {
+        if (ip == null || ip.equals("null") || port == 0 || password == null
+                || password.equals("null") || ip.equals("X") || password.equals("X")) {
             getLogger().warning("IP, port, or password missing.");
         } else {
             try {
@@ -67,7 +75,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
         players = getServer().getOnlinePlayers().length;
         if (players > max) {
-            getServer().broadcastMessage(ChatColor.RED + "Cross-server chat is disabled due to high player count.");
+            getServer().broadcastMessage(ChatColor.RED
+                    + "Cross-server chat is disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
         }
     }
@@ -85,31 +94,45 @@ public class ConvoSync extends JavaPlugin implements Listener {
         getConfig().set("port", port);
         getConfig().set("password", password);
         getConfig().set("max-players", max);
-        getConfig().set("allow-cross-server-commands", getConfig().getBoolean("allow-cross-server-commands"));
-        getConfig().set("notif.player-death", getConfig().getBoolean("notif.player-death"));
+        getConfig().set("allow-cross-server-commands",
+                getConfig().getBoolean("allow-cross-server-commands"));
+        getConfig().set("notif.player-death",
+                getConfig().getBoolean("notif.player-death"));
         getConfig().set("notif.afk", getConfig().getBoolean("notif.afk"));
-        getConfig().set("auto-reconnect.after-connect-fail", getConfig().getBoolean("auto-reconnect.after-connect-fail"));
-        getConfig().set("auto-reconnect.after-socket-error", getConfig().getBoolean("auto-reconnect.after-socket-error"));
-        getConfig().set("auto-reconnect.after-socket-close", getConfig().getBoolean("auto-reconnect.after-socket-close"));
-        getConfig().set("auto-reconnect.time-delay-ms", getConfig().getInt("auto-reconnect.time-delay-ms"));
+        getConfig().set("auto-reconnect.after-connect-fail",
+                getConfig().getBoolean("auto-reconnect.after-connect-fail"));
+        getConfig().set("auto-reconnect.after-socket-error",
+                getConfig().getBoolean("auto-reconnect.after-socket-error"));
+        getConfig().set("auto-reconnect.after-socket-close",
+                getConfig().getBoolean("auto-reconnect.after-socket-close"));
+        getConfig().set("auto-reconnect.time-delay-ms",
+                getConfig().getInt("auto-reconnect.time-delay-ms"));
         saveConfig();
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (cmd.getName().equals("convosync") && args.length != 0) {
-            switch (Action.valueOf(args[0].toUpperCase())) {
+            Action a;
+            try {
+                a = Action.valueOf(args[0].toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                return false;
+            }
+            switch (a) {
                 case SETIP:
                     if (args.length != 2) {
                         sender.sendMessage(ChatColor.RED + "/convosync setip <ip>");
                         return true;
                     }
                     if (connected) {
-                        sender.sendMessage(ChatColor.RED + "The server is currently connected. Please disconnect first.");
+                        sender.sendMessage(ChatColor.RED
+                                + "The server is currently connected. Please disconnect first.");
                         return true;
                     }
                     ip = args[1];
-                    sender.sendMessage(ChatColor.GREEN + "Now using IP " + ChatColor.BLUE + ip + ChatColor.GREEN + ".");
+                    sender.sendMessage(ChatColor.GREEN + "Now using IP "
+                            + ChatColor.BLUE + ip + ChatColor.GREEN + ".");
                     return true;
                 case SETPORT:
                     if (args.length != 2) {
@@ -117,7 +140,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         return true;
                     }
                     if (connected) {
-                        sender.sendMessage(ChatColor.RED + "The server is currently connected. Please disconnect first.");
+                        sender.sendMessage(ChatColor.RED
+                                + "The server is currently connected. Please disconnect first.");
                         return true;
                     }
                     try {
@@ -126,7 +150,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         sender.sendMessage(ChatColor.RED + "You did not enter a valid number.");
                         return true;
                     }
-                    sender.sendMessage(ChatColor.GREEN + "Nowing using port " + ChatColor.BLUE + port + ChatColor.GREEN + ".");
+                    sender.sendMessage(ChatColor.GREEN + "Nowing using port "
+                            + ChatColor.BLUE + port + ChatColor.GREEN + ".");
                     return true;
                 case RECONNECT:
                     if (connected) {
@@ -134,14 +159,16 @@ public class ConvoSync extends JavaPlugin implements Listener {
                             shouldBe = false;
                             disconnect();
                         } catch (IOException ex) {
-                            getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
+                            getLogger().log(Level.WARNING,
+                                    "Error closing socket: {0}", ex.toString());
                         }
                     }
                     try {
                         shouldBe = true;
                         connect();
                     } catch (IOException ex) {
-                        getLogger().log(Level.WARNING, "Error connecting to server: {0}", ex.toString());
+                        getLogger().log(Level.WARNING,
+                                "Error connecting to server: {0}", ex.toString());
                     }
                     status(sender);
                     return true;
@@ -150,7 +177,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
                         shouldBe = false;
                         disconnect();
                     } catch (IOException ex) {
-                        getLogger().log(Level.WARNING, "Error closing socket: {0}", ex.toString());
+                        getLogger().log(Level.WARNING,
+                                "Error closing socket: {0}", ex.toString());
                     }
                     status(sender);
                     return true;
@@ -159,16 +187,26 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     return true;
                 case SETMAXPLAYERS:
                     if (args.length != 2) {
-                        sender.sendMessage(ChatColor.RED + "/convosync setmaxplayers <max playeres>");
+                        sender.sendMessage(ChatColor.RED
+                                + "/convosync setmaxplayers <max playeres>");
                         return true;
                     }
                     try {
                         max = Integer.parseInt(args[1]);
                     } catch (NumberFormatException ex) {
-                        sender.sendMessage(ChatColor.RED + "You did not enter a valid number.");
+                        sender.sendMessage(ChatColor.RED
+                                + "You did not enter a valid number.");
                         return true;
                     }
-                    sender.sendMessage(ChatColor.GREEN + "Now using max player count of " + ChatColor.BLUE + max + ChatColor.GREEN + ".");
+                    sender.sendMessage(ChatColor.GREEN
+                            + "Now using max player count of " + ChatColor.BLUE
+                            + max + ChatColor.GREEN + ".");
+                    return true;
+                case USERS:
+                    out(new UserListRequest(sender.getName()), false);
+                    return true;
+                case VERSION:
+                    sender.sendMessage(ChatColor.GREEN + "v" + Main.VERSION);
                     return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {
@@ -182,23 +220,28 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     if (players < max) {
                         out(msg, false);
                     } else {
-                        sender.sendMessage(ChatColor.RED + "There are too many players on this server to chat cross-server.");
+                        sender.sendMessage(ChatColor.RED
+                                + "There are too many players on this server to chat cross-server.");
                     }
                 } else {
-                    sender.sendMessage(ChatColor.RED + "Cannot send message : Connection is not authenticated.");
+                    sender.sendMessage(ChatColor.RED
+                            + "Cannot send message : Connection is not authenticated.");
                 }
             } else {
-                sender.sendMessage(ChatColor.RED + "Cannot send message : Disconnected from server.");
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Disconnected from server.");
             }
             getServer().dispatchCommand(sender, "say " + msg);
             return true;
         } else if (cmd.getName().equals("ctell") && args.length > 1) {
             if (!connected) {
-                sender.sendMessage(ChatColor.RED + "Cannot send message : Disconnected from server.");
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Disconnected from server.");
                 return true;
             }
             if (!auth) {
-                sender.sendMessage(ChatColor.RED + "Cannot send message : Connection is not authenticated.");
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Connection is not authenticated.");
                 return true;
             }
             if (args[0].equalsIgnoreCase("console")) {
@@ -213,15 +256,18 @@ public class ConvoSync extends JavaPlugin implements Listener {
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
             if (!(sender instanceof Player)) {
-                sender.sendMessage(ChatColor.RED + "You must be a player to use this command.");
+                sender.sendMessage(ChatColor.RED
+                        + "You must be a player to use this command.");
                 return true;
             }
             if (!connected) {
-                sender.sendMessage(ChatColor.RED + "Cannot send command : Disconnected from server.");
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send command : Disconnected from server.");
                 return true;
             }
             if (!auth) {
-                sender.sendMessage(ChatColor.RED + "Cannot send command : Connection is not authenticated.");
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send command : Connection is not authenticated.");
                 return true;
             }
             StringBuilder sb;
@@ -229,11 +275,13 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 sb = new StringBuilder(args[0].substring(1));
                 for (int idx = 1; idx < args.length; idx++) {
                     if (args[idx].endsWith("\"")) {
-                        String server = sb.append(" ").append(args[idx].substring(0, args[idx].length() - 1)).toString();
+                        String server = sb.append(" ")
+                                .append(args[idx].substring(0, args[idx].length() - 1))
+                                .toString();
                         if (args.length < idx + 2) {
                             return false;
                         }
-                        sb = new StringBuilder(args[idx+1]);
+                        sb = new StringBuilder(args[idx + 1]);
                         for (int idx2 = idx + 2; idx2 < args.length; idx2++) {
                             sb.append(" ").append(args[idx2]);
                         }
@@ -255,10 +303,35 @@ public class ConvoSync extends JavaPlugin implements Listener {
             return false;
         } else if (cmd.getName().equals("togglecs")) {
             if (sender instanceof Player) {
-                sender.sendMessage(ChatColor.GREEN + "Cross-server chat " + ChatColor.BLUE + (getUser(sender.getName()).toggle() ? "enabled" : "disabled") + ChatColor.GREEN + ".");
+                sender.sendMessage(ChatColor.GREEN + "Cross-server chat "
+                        + ChatColor.BLUE
+                        + (getUser(sender.getName()).toggle() ? "enabled" : "disabled")
+                        + ChatColor.GREEN + ".");
             } else {
-                sender.sendMessage(ChatColor.RED + "You must be a player to use this command.");
+                sender.sendMessage(ChatColor.RED
+                        + "You must be a player to use this command.");
             }
+            return true;
+        } else if (cmd.getName().equals("csregister")) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage(ChatColor.RED
+                        + "You must be a player to use this command!");
+                return true;
+            }
+            Random rng = new Random();
+            StringBuilder sb = new StringBuilder(
+                    new String[]{"poptarts", "fedora", "oops", "potato",
+                "cabbage", "redhat", "pinkypie", "fluttershy", "badwolf",
+                "iPassword", "tuesday", "tardis", "mycroft", "cafebabe",
+                "steve", "herobrine", "creeper", "cthulhu", "zezima", "zelda",
+                "hyrule"}[rng.nextInt(21)]);
+            for (int idx = 0; idx < 4; idx++) {
+                sb.append((char) (rng.nextInt(10) + 48));
+            }
+            String newPassword = sb.toString();
+            out(new UserRegistration(sender.getName(), newPassword), false);
+            sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
+                    + ChatColor.BLUE + newPassword + ChatColor.GREEN + "\".");
             return true;
         }
         return false;
@@ -266,8 +339,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAsyncPlayerChat(AsyncPlayerChatEvent evt) {
-        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
-            out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName()).replace("%2$s", evt.getMessage()), false);
+        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled && (!getServer().getPluginManager().isPluginEnabled("Essentials") || essTask.chat(evt))) {
+            out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
+                    .replace("%2$s", evt.getMessage()), false);
         }
     }
 
@@ -275,7 +349,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
     public void onPlayerJoin(PlayerJoinEvent evt) {
         players++;
         if (players == max) {
-            getServer().broadcastMessage(ChatColor.RED + "Cross-server chat is now disabled due to high player count.");
+            getServer().broadcastMessage(ChatColor.RED
+                    + "Cross-server chat is now disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
         }
         if (getUser(evt.getPlayer().getName()).enabled) {
@@ -283,15 +358,19 @@ public class ConvoSync extends JavaPlugin implements Listener {
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), true), false);
         if (!connected && evt.getPlayer().hasPermission("convosync.convosync")) {
-            evt.getPlayer().sendMessage(ChatColor.RED + "ConvoSync is currently disconnected from the chat server.");
+            evt.getPlayer().sendMessage(ChatColor.RED
+                    + "ConvoSync is currently disconnected from the chat server.");
             if (ip == null || ip.equals("null") || ip.equals("X")) {
-                evt.getPlayer().sendMessage(ChatColor.RED + "ConvoSync currently has no IP to connect to.");
+                evt.getPlayer().sendMessage(ChatColor.RED
+                        + "ConvoSync currently has no IP to connect to.");
             }
             if (port == 0) {
-                evt.getPlayer().sendMessage(ChatColor.RED + "ConvoSync currently has no port to connect to.");
+                evt.getPlayer().sendMessage(ChatColor.RED
+                        + "ConvoSync currently has no port to connect to.");
             }
             if (password == null || password.equals("null") || password.equals("X")) {
-                evt.getPlayer().sendMessage(ChatColor.RED + "ConvoSync currently has no password to connect with.");
+                evt.getPlayer().sendMessage(ChatColor.RED
+                        + "ConvoSync currently has no password to connect with.");
             }
         }
     }
@@ -300,13 +379,17 @@ public class ConvoSync extends JavaPlugin implements Listener {
     public void onPlayerQuit(PlayerQuitEvent evt) {
         players--;
         if (players == max - 1) {
-            getServer().broadcastMessage(ChatColor.RED + "Cross-server chat is now enabled due to reduced player count.");
+            getServer().broadcastMessage(ChatColor.RED
+                    + "Cross-server chat is now enabled due to reduced player count.");
             out(new SetEnabledProperty(true), false);
         }
+        out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
         if (getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getQuitMessage(), false);
         }
-        out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
+        if (essTask != null) {
+            essTask.remove(evt.getPlayer().getName());
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -317,7 +400,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
     }
 
     private void connect() throws IOException {
-        if (ip == null || ip.equals("null") || port == 0 || password == null || password.equals("null") || ip.equals("X") || password.equals("X")) {
+        if (ip == null || ip.equals("null") || port == 0 || password == null
+                || password.equals("null") || ip.equals("X") || password.equals("X")) {
             return;
         }
         socket = new Socket(ip, port);
@@ -328,124 +412,11 @@ public class ConvoSync extends JavaPlugin implements Listener {
         for (int idx = 0; idx < list.length; idx++) {
             list[idx] = getServer().getOnlinePlayers()[idx].getName();
         }
-        out(new PluginAuthenticationRequest(getServer().getServerName(), password, list), true);
-        final ConvoSync plugin = this;
-        new Thread() {
-            @Override
-            public void run() {
-                Object input;
-                while (connected) {
-                    try {
-                        input = in.readObject();
-                        if (!(input instanceof Message)) {
-                            getLogger().log(Level.WARNING, "{0} isn't a message!", input);
-                            continue;
-                        }
-                        if (input instanceof PrivateMessage) {
-                            PrivateMessage pm = (PrivateMessage) input;
-                            if (pm.RECIPIENT.equalsIgnoreCase("console")) {
-                                getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
-                                        new Object[]{ChatColor.GOLD, pm.SERVER, pm.SENDER,
-                                    ChatColor.GOLD, ChatColor.WHITE, pm.MSG});
-                                out(new PlayerMessage(ChatColor.GOLD
-                                        + "[me -> [" + getServer().getServerName()
-                                        + "]" + pm.RECIPIENT + ChatColor.GOLD
-                                        + "] " + ChatColor.WHITE
-                                        + pm.MSG, pm.SENDER), false);
-                            } else {
-                                Player player = getServer().getPlayerExact(pm.RECIPIENT);
-                                if (player != null) {
-                                    player.sendMessage(ChatColor.GOLD + "[["
-                                            + pm.SERVER + "]" + pm.SENDER
-                                            + ChatColor.GOLD + " -> me] "
-                                            + ChatColor.WHITE + pm.MSG);
-                                    out(new PlayerMessage(ChatColor.GOLD
-                                            + "[me -> [" + getServer().getServerName()
-                                            + "]" + pm.RECIPIENT + ChatColor.GOLD
-                                            + "] " + ChatColor.WHITE
-                                            + pm.MSG, pm.SENDER), false);
-                                }
-                            }
-                            continue;
-                        }
-                        if (input instanceof PlayerMessage) {
-                            PlayerMessage pm = (PlayerMessage) input;
-                            if (pm.RECIPIENT.equals("CONSOLE")) {
-                                getLogger().info(pm.MSG);
-                            } else {
-                                Player player = getServer().getPlayerExact(pm.RECIPIENT);
-                                if (player != null) {
-                                    player.sendMessage(pm.MSG);
-                                }
-                            }
-                            continue;
-                        }
-                        if (input instanceof ChatMessage) {
-                            ChatMessage msg = (ChatMessage) input;
-                            for (ChatListener l : listeners) {
-                                l.onInput(msg.MSG);
-                            }
-                            if (msg.OVERRIDE) {
-                                getServer().broadcastMessage(msg.MSG);
-                            } else {
-                                for (Player player : getServer().getOnlinePlayers()) {
-                                    if (getUser(player.getName()).enabled) {
-                                        player.sendMessage(msg.MSG);
-                                    }
-                                }
-                                getLogger().info(format(msg.MSG));
-                            }
-                            continue;
-                        }
-                        if (input instanceof CommandMessage) {
-                            CommandMessage cmd = (CommandMessage) input;
-                            if (!getConfig().getBoolean("allow-cross-server-commands")) {
-                                out(new PlayerMessage(ChatColor.RED + "This server doesn't allow cross-server commands.", cmd.SENDER), false);
-                                continue;
-                            }
-                            getLogger().log(Level.INFO, "Executing remote command {0}", cmd);
-                            try {
-                                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, plugin), cmd.CMD);
-                            } catch (CommandException ex) {
-                                getLogger().log(Level.SEVERE, null, ex);
-                            }
-                            continue;
-                        }
-                        if (input instanceof AuthenticationRequestResponse) {
-                            auth = ((AuthenticationRequestResponse) input).AUTH;
-                            getLogger().info(auth ? "Connection authenticated." : "Failed to authenticate with server.");
-                            continue;
-                        }
-                        if (input instanceof DisconnectMessage) {
-                            getServer().broadcastMessage(ChatColor.RED + "The ConvoSync server has disconnected this server.");
-                            connected = false;
-                            shouldBe = false;
-                            auth = false;
-                        }
-                    } catch (IOException ex) {
-                        connected = false;
-                        getLogger().log(Level.WARNING, "Error reading from socket: {0}", ex.toString());
-                        if (socket.isClosed() && getConfig().getBoolean("auto-reconnect.after-socket-close")) {
-                            autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
-                        } else {
-                            try {
-                                disconnect();
-                            } catch (IOException ex2) {
-                                getLogger().log(Level.WARNING, "Error closing socket: {0}", ex2.toString());
-                            }
-                            if (getConfig().getBoolean("auto-reconnect.after-socker-error")) {
-                                autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
-                            }
-                        }
-                    } catch (ClassNotFoundException ex) {
-                        getLogger().log(Level.SEVERE, "Fatal error.", ex);
-                        connected = false;
-                    }
-                }
-            }
-        }.start();
+        out(new PluginAuthenticationRequest(getServer().getServerName(), password, Main.VERSION, list), true);
+        new Thread(new InputTask()).start();
         if (getServer().getPluginManager().isPluginEnabled("Essentials") && getConfig().getBoolean("notif.afk")) {
-            new AFKThread(this).start();
+            essTask = new EssentialsTask(this);
+            new Thread(essTask).start();
         }
         getLogger().info(socket.toString());
     }
@@ -462,29 +433,13 @@ public class ConvoSync extends JavaPlugin implements Listener {
         connected = false;
     }
 
-    private void autoReconnect(final int pausetime) {
+    private void autoReconnect(int pausetime) {
         if (!shouldBe && !isEnabled()) {
             return;
         }
-        getLogger().log(Level.INFO, "Attempting to reconnect every {0} seconds...", (int) Math.round(pausetime / 1000));
-        new Thread() {
-            @Override
-            public void run() {
-                int attempts = 1;
-                do {
-                    try {
-                        Thread.sleep(pausetime);
-                        connect();
-                    } catch (InterruptedException ex) {
-                        getLogger().log(Level.WARNING, "Error attempting automatic reconnection: {0}", ex.toString());
-                        return;
-                    } catch (IOException ex) {
-                        attempts++;
-                    }
-                } while (!connected);
-                getLogger().log(Level.INFO, "Successfully reconnected after {0} attempts.", attempts);
-            }
-        }.start();
+        getLogger().log(Level.INFO, "Attempting to reconnect every {0} seconds...",
+                (int) Math.round(pausetime / 1000));
+        new Thread(new AutoReconnectTask(pausetime)).start();
     }
 
     protected boolean out(String s, boolean override) {
@@ -549,10 +504,6 @@ public class ConvoSync extends JavaPlugin implements Listener {
         }
     }
 
-    private String format(String s) {
-        return s.replaceAll(ChatColor.COLOR_CHAR + "\\w", "");
-    }
-
     public boolean addChatListener(ChatListener listener) {
         return listeners.add(listener);
     }
@@ -564,5 +515,167 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     public boolean chat(String s) {
         return out(s, false);
+    }
+
+    private void processMessage(Message msg) {
+        if (msg instanceof PrivateMessage) {
+            PrivateMessage pm = (PrivateMessage) msg;
+            if (pm.RECIPIENT.equalsIgnoreCase("console")) {
+                getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
+                        new Object[]{ChatColor.GOLD, pm.SERVER, pm.SENDER,
+                    ChatColor.GOLD, ChatColor.WHITE, pm.MSG});
+                out(new PlayerMessage(ChatColor.GOLD
+                        + "[me -> [" + getServer().getServerName()
+                        + "]" + pm.RECIPIENT + ChatColor.GOLD
+                        + "] " + ChatColor.WHITE
+                        + pm.MSG, pm.SENDER), false);
+            } else {
+                Player player = getServer().getPlayerExact(pm.RECIPIENT);
+                if (player != null) {
+                    player.sendMessage(ChatColor.GOLD + "[["
+                            + pm.SERVER + "]" + pm.SENDER
+                            + ChatColor.GOLD + " -> me] "
+                            + ChatColor.WHITE + pm.MSG);
+                    out(new PlayerMessage(ChatColor.GOLD
+                            + "[me -> [" + getServer().getServerName()
+                            + "]" + pm.RECIPIENT + ChatColor.GOLD
+                            + "] " + ChatColor.WHITE
+                            + pm.MSG, pm.SENDER), false);
+                }
+            }
+            return;
+        }
+        if (msg instanceof PlayerMessage) {
+            PlayerMessage pm = (PlayerMessage) msg;
+            if (pm.RECIPIENT.equals("CONSOLE")) {
+                getLogger().info(pm.MSG);
+            } else {
+                Player player = getServer().getPlayerExact(pm.RECIPIENT);
+                if (player != null) {
+                    player.sendMessage(pm.MSG);
+                }
+            }
+            return;
+        }
+        if (msg instanceof ChatMessage) {
+            ChatMessage chatMsg = (ChatMessage) msg;
+            for (ChatListener l : listeners) {
+                l.onInput(chatMsg.MSG);
+            }
+            if (chatMsg.OVERRIDE) {
+                getServer().broadcastMessage(chatMsg.MSG);
+            } else {
+                for (Player player : getServer().getOnlinePlayers()) {
+                    if (getUser(player.getName()).enabled) {
+                        player.sendMessage(chatMsg.MSG);
+                    }
+                }
+                getLogger().info(format(chatMsg.MSG));
+            }
+            return;
+        }
+        if (msg instanceof CommandMessage) {
+            CommandMessage cmd = (CommandMessage) msg;
+            if (!getConfig().getBoolean("allow-cross-server-commands")) {
+                out(new PlayerMessage(ChatColor.RED
+                        + "This server doesn't allow cross-server commands.",
+                        cmd.SENDER), false);
+                return;
+            }
+            getLogger().log(Level.INFO, "Executing remote command {0}", cmd);
+            try {
+                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, PLUGIN), cmd.CMD);
+            } catch (CommandException ex) {
+                getLogger().log(Level.SEVERE, null, ex);
+            }
+            return;
+        }
+        if (msg instanceof AuthenticationRequestResponse) {
+            AuthenticationRequestResponse response = (AuthenticationRequestResponse) msg;
+            auth = response.AUTH;
+            getLogger().info(auth ? "Connection authenticated."
+                    : "Failed to authenticate with server.");
+            if (!Main.VERSION.equals(response.VERSION)) {
+                getLogger().log(Level.WARNING, "Version mismatch:"
+                        + "Local version {0}, ConvoSync server version {1}",
+                        new Object[]{Main.VERSION, response.VERSION});
+            }
+            if (auth) {
+                getServer().broadcastMessage(ChatColor.GREEN
+                        + "Now connected to the ConvoSync server.");
+            }
+            return;
+        }
+        if (msg instanceof DisconnectMessage) {
+            getServer().broadcastMessage(ChatColor.RED
+                    + "The ConvoSync server has disconnected this server.");
+            connected = false;
+            shouldBe = false;
+            auth = false;
+        }
+    }
+
+    private class InputTask implements Runnable {
+
+        @Override
+        public void run() {
+            Object input;
+            while (connected) {
+                try {
+                    input = in.readObject();
+                    if (input instanceof Message) {
+                        processMessage((Message) input);
+                    } else {
+                        getLogger().log(Level.WARNING, "{0} isn't a message!", input);
+                    }
+
+                } catch (IOException ex) {
+                    connected = false;
+                    getLogger().log(Level.WARNING, "Error reading from socket: {0}", ex.toString());
+                    if (socket.isClosed() && getConfig().getBoolean("auto-reconnect.after-socket-close")) {
+                        autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
+                    } else {
+                        try {
+                            disconnect();
+                        } catch (IOException ex2) {
+                            getLogger().log(Level.WARNING, "Error closing socket: {0}", ex2.toString());
+                        }
+                        if (getConfig().getBoolean("auto-reconnect.after-socker-error")) {
+                            autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
+                        }
+                    }
+                } catch (ClassNotFoundException ex) {
+                    getLogger().log(Level.SEVERE, "Fatal error.", ex);
+                    connected = false;
+                }
+            }
+        }
+    }
+
+    private class AutoReconnectTask implements Runnable {
+
+        private int pausetime;
+
+        private AutoReconnectTask(int pausetime) {
+            this.pausetime = pausetime;
+        }
+
+        @Override
+        public void run() {
+            int attempts = 1;
+            try {
+                do {
+                    try {
+                        Thread.sleep(pausetime);
+                        connect();
+                    } catch (IOException ex) {
+                        attempts++;
+                    }
+                } while (!connected);
+            } catch (InterruptedException ex) {
+                return;
+            }
+            getLogger().log(Level.INFO, "Successfully reconnected after {0} attempts.", attempts);
+        }
     }
 }

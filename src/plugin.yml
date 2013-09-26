@@ -1,12 +1,12 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.2
+version: 1.0.3
 author: Blir
 softdepend: [Essentials]
 commands:
   convosync:
     description: Used to manage the ConvoSync plugin.
-    usage: §c/<command> <setip|setport|reconnect|status|setmaxplayers> [other parameters]
+    usage: §c/<command> <setip|setport|reconnect|disconnect|status|setmaxplayers|users|version> [other parameters]
     permission: convosync.convosync
     permission-message: §cYou don't have permission to use this command.
   csay:
@@ -29,6 +29,11 @@ commands:
     usage: §c/<command>
     permission: convosync.togglecs
     permission-message: §cYou don't have permission to use this command.
+  csregister:
+    description: Registers your CS client user account.
+    usage: §c/<command>
+    permission: convosync.csregister
+    permission-message: §cYou don't have permission to use this command.
 permissions:
   convosync.*:
     children:
@@ -37,6 +42,7 @@ permissions:
       convosync.ctell: true
       convosync.ccmd: true
       convosync.togglecs: true
+      convosync.csregister: true
   convosync.convosync:
     description: Allows use of the /convosync command.
   convosync.csay:
@@ -47,4 +53,7 @@ permissions:
     description: Allows use of the /ccmd command.
   convosync.togglecs:
     description: Allows use of the /togglecs command.
-    
+    default: true
+  convosync.csregister:
+    description: Allows use of the /csregister command.
+    default: true
