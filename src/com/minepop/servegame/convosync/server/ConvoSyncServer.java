@@ -219,12 +219,12 @@ public class ConvoSyncServer {
     private synchronized void close(boolean force) throws IOException {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
-            for (Client client : clients) {
-                client.close(false, true);
-            }
+            socket.close();
         } finally {
             try {
-                socket.close();
+                for (Client client : clients) {
+                    client.close(false, true);
+                }
             } finally {
                 userMap.clear();
                 clients.clear();

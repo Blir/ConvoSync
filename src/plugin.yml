@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.3 Dev 6.14
+version: 1.0.3 Dev 6.15
 author: Blir
 softdepend: [Essentials]
 commands:
