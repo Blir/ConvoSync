@@ -33,7 +33,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     private static enum Action {
 
-        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS
+        SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS, VERSION
     }
     private int port, players, max = 25;
     private String ip, password;
@@ -205,6 +205,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 case USERS:
                     out(new UserListRequest(sender.getName()), false);
                     return true;
+                case VERSION:
+                    sender.sendMessage("v" + Main.VERSION);
+                    return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {
             StringBuilder sb = new StringBuilder();
@@ -325,10 +328,10 @@ public class ConvoSync extends JavaPlugin implements Listener {
             for (int idx = 0; idx < 4; idx++) {
                 sb.append((char) (rng.nextInt(10) + 48));
             }
-            String password = sb.toString();
-            out(new UserRegistration(sender.getName(), password), false);
+            String newPassword = sb.toString();
+            out(new UserRegistration(sender.getName(), newPassword), false);
             sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
-                    + ChatColor.BLUE + password + ChatColor.GREEN + "\".");
+                    + ChatColor.BLUE + newPassword + ChatColor.GREEN + "\".");
             return true;
         }
         return false;

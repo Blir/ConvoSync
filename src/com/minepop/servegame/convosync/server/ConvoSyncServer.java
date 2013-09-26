@@ -27,7 +27,7 @@ public class ConvoSyncServer {
     private static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
-        USERS, NAME, HELP, DEBUG
+        USERS, NAME, HELP, DEBUG, VERSION
     }
 
     private static enum SubCommand {
@@ -856,7 +856,8 @@ public class ConvoSyncServer {
                         + "/users <list|op|unregister>- Used to manage client users.\n"
                         + "/name [name]               - Sets your name to the given name.\n"
                         + "/help                      - Prints all commands.\n"
-                        + "/debug                     - Toggles debug mode.");
+                        + "/debug                     - Toggles debug mode.\n"
+                        + "/version                   - Displays version info.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
@@ -870,6 +871,9 @@ public class ConvoSyncServer {
                     fileHandler.setLevel(Level.CONFIG);
                     LOGGER.setLevel(Level.CONFIG);
                 }
+                break;
+            case VERSION:
+                LOGGER.log(Level.INFO, "v{0}", Main.VERSION);
                 break;
         }
     }
