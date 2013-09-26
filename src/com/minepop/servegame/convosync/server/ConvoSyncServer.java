@@ -348,7 +348,7 @@ public class ConvoSyncServer {
         return null;
     }
 
-    private enum ClientType {
+    private static enum ClientType {
 
         PLUGIN, APPLICATION
     }
@@ -561,9 +561,9 @@ public class ConvoSyncServer {
             }
             if (msg instanceof UserListRequest) {
                 String sender = ((UserListRequest) msg).SENDER;
-                sendMsg(new PlayerMessage("All known online users:", sender), false);
+                sendMsg(new PlayerMessage(COLOR_CHAR + "aAll known online users:", sender), false);
                 for (String user : userMap.keySet()) {
-                    sendMsg(new PlayerMessage(user + " on server " + userMap.get(user), sender), false);
+                    sendMsg(new PlayerMessage(COLOR_CHAR + "a" + user + " on server " + userMap.get(user), sender), false);
                 }
                 return;
             }
@@ -595,7 +595,7 @@ public class ConvoSyncServer {
 
         private void sendMsg(Object obj) {
             if (!alive) {
-                LOGGER.log(Level.WARNING, "Tried to write to a dead client!");
+                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", this);
                 return;
             }
             try {

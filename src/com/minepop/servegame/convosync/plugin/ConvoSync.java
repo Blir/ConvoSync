@@ -206,7 +206,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     out(new UserListRequest(sender.getName()), false);
                     return true;
                 case VERSION:
-                    sender.sendMessage("v" + Main.VERSION);
+                    sender.sendMessage(ChatColor.GREEN + "v" + Main.VERSION);
                     return true;
             }
         } else if (cmd.getName().equals("csay") && args.length != 0) {
