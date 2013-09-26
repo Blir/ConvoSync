@@ -450,7 +450,8 @@ public class ConvoSyncServer {
                                         + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
                                         element);
                             } else {
-                                getClient(element).close(true, true);
+                                client.close(true, true);
+                                clients.remove(client);
                             }
                         }
                         userMap.put(element, localname);
