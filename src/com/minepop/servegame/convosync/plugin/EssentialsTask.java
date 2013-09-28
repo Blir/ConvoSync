@@ -32,7 +32,7 @@ public class EssentialsTask implements Runnable {
     @Override
     public void run() {
         if (plugin.isEss) {
-            plugin.getLogger().info("Essentials AFK Thread started!");
+            plugin.getLogger().info("Essentials Task started!");
         }
         while (plugin.connected && plugin.isEss) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
@@ -49,7 +49,7 @@ public class EssentialsTask implements Runnable {
                 Thread.sleep(250);
             } catch (InterruptedException ex) {
                 plugin.isEss = false;
-                plugin.getLogger().warning("Essentials AFK Thread has crashed!");
+                return;
             }
         }
     }
