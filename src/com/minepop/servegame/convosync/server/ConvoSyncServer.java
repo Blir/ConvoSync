@@ -65,12 +65,12 @@ public class ConvoSyncServer {
             log = new File("CS-Server" + idx + ".log");
         }
         fileHandler = new FileHandler(log.getName(), true);
-        LOGGER.log(Level.CONFIG, "Logging to {0}", log.getName());
         fileHandler.setFormatter(formatter);
         fileHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
+        LOGGER.log(Level.CONFIG, "Logging to {0}", log.getName());
         new ConvoSyncServer().run(args);
     }
 
