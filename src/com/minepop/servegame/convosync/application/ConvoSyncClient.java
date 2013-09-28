@@ -5,7 +5,9 @@ import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.Properties;
 import java.util.logging.*;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -20,6 +22,7 @@ public final class ConvoSyncClient {
     protected String name;
     private String ip, password;
     private int port;
+    protected int timeout = 20000;
     private Socket socket;
     protected boolean pm, connected, auth;
     private boolean remember;
@@ -149,7 +152,8 @@ public final class ConvoSyncClient {
         try {
             gui.clearUserList();
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
-            socket = new Socket(ip, port);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(ip, port), timeout);
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;

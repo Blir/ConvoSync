@@ -395,7 +395,7 @@ public class ConvoSyncServer {
                 } catch (IOException ex) {
                     if (!socket.isClosed()) {
                         try {
-                            socket.close();
+                            completelyClose(false);
                         } catch (IOException ex2) {
                             LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                         }
@@ -403,7 +403,7 @@ public class ConvoSyncServer {
                 } catch (ClassNotFoundException ex) {
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + localname, ex);
                     try {
-                        socket.close();
+                        completelyClose(false);
                     } catch (IOException ex2) {
                         LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                     }
