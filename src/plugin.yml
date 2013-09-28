@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.3
+version: 1.0.4-dev1.0
 author: Blir
 softdepend: [Essentials]
 commands:
@@ -48,6 +48,7 @@ permissions:
   convosync.csay:
     description: Allows use of the /csay command.
   convosync.ctell:
+    default: true
     description: Allows use of the /ctell command.
   convosync.ccmd:
     description: Allows use of the /ccmd command.

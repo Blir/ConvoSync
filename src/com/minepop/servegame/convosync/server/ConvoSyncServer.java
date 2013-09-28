@@ -9,14 +9,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.*;
-import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
-import static com.minepop.servegame.convosync.Main.format;
+import static com.minepop.servegame.convosync.Main.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.*;
 
 /**
  *
@@ -129,15 +126,21 @@ public class ConvoSyncServer {
         Properties p = null;
         try {
             p = new Properties();
-            FileInputStream fis = new FileInputStream(new File("CS-Server.properties"));
-            p.load(fis);
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(new File("CS-Server.properties"));
+                p.load(fis);
+            } finally {
+                if (fis != null) {
+                    fis.close();
+                }
+            }
             String prop = p.getProperty("chat-color");
             chatColor = prop == null ? '\u0000' : prop.charAt(0);
             LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
             prop = p.getProperty("use-prefixes");
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
-            fis.close();
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -160,10 +163,11 @@ public class ConvoSyncServer {
             }
         }
         if (p != null) {
-            String prop;
+            String prop = p.getProperty("port");
             try {
-                port = Integer.parseInt(p.getProperty("port"));
-            } catch (NumberFormatException ignore) {
+                port = Integer.parseInt(prop);
+            } catch (NumberFormatException ex) {
+                LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
             }
             prop = p.getProperty("name");
             if (prop != null) {
@@ -679,18 +683,24 @@ public class ConvoSyncServer {
                     }
                 }
                 try {
-                    PrintWriter pw = new PrintWriter("banlist.txt");
-                    for (String elem : banlist) {
-                        pw.println(elem);
+                    PrintWriter pw = null;
+                    try {
+                        pw = new PrintWriter("banlist.txt");
+                        for (String elem : banlist) {
+                            pw.println(elem);
+                        }
+                    } finally {
+                        if (pw != null) {
+                            pw.close();
+                        }
                     }
-                    pw.close();
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error saving ban list.", ex);
                 }
                 try {
                     Properties p = new Properties();
                     FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
-                    p.setProperty("chat-color", Character.toString(chatColor));
+                    p.setProperty("chat-color", String.valueOf(chatColor));
                     p.setProperty("use-prefixes", String.valueOf(prefix));
                     p.store(fos, null);
                     fos.close();
