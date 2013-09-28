@@ -80,8 +80,8 @@ public class EssentialsTask implements Runnable {
         users.remove(getUser(name));
     }
     
-    public boolean chat(AsyncPlayerChatEvent evt) {
-        return !ess.getUser(evt.getPlayer().getName()).isVanished();
+    public boolean chat(Player player) {
+        return !ess.getUser(player.getPlayer().getName()).isVanished();
     }
 
     private static class User {

@@ -342,13 +342,8 @@ public class ConvoSync extends JavaPlugin implements Listener {
         //getLogger().log(Level.INFO, "Awmg a chat event!");
         //getLogger().log(Level.INFO, "Cancelled: {0} Player: {1}", new Object[]{evt.isCancelled(), evt.getPlayer().getName()});
         if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
-            if (isEss && essTask.chat(evt)) {
-                out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
-                        .replace("%2$s", evt.getMessage()), false);
-            } else if (!isEss) {
-                out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
-                        .replace("%2$s", evt.getMessage()), false);
-            }
+            out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
+                    .replace("%2$s", evt.getMessage()), false);
         }
     }
 
@@ -360,7 +355,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     + "Cross-server chat is now disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
         }
-        if (getUser(evt.getPlayer().getName()).enabled) {
+        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
             out(evt.getJoinMessage(), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), true), false);
@@ -391,7 +386,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
             out(new SetEnabledProperty(true), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
-        if (getUser(evt.getPlayer().getName()).enabled) {
+        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
             out(evt.getQuitMessage(), false);
         }
         if (essTask != null) {

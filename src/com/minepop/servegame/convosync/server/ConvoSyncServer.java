@@ -953,6 +953,9 @@ public class ConvoSyncServer {
                             out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                         }
                     }
+                } catch (NoSuchElementException ex) {
+                    in = new Scanner(System.in);
+                    LOGGER.log(Level.SEVERE, "{0}", ex.toString());
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
                 }
