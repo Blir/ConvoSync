@@ -609,7 +609,7 @@ public class ConvoSyncServer {
                 LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, this});
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
-                    LOGGER.log(Level.SEVERE, "Could not write object " + obj, ex);
+                    LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, this, ex.toString()});
                 }
             }
         }
