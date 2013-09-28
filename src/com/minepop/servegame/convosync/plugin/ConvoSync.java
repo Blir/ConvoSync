@@ -339,7 +339,9 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAsyncPlayerChat(AsyncPlayerChatEvent evt) {
-        if (evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
+        //getLogger().log(Level.INFO, "Awmg a chat event!");
+        //getLogger().log(Level.INFO, "Cancelled: {0} Player: {1}", new Object[]{evt.isCancelled(), evt.getPlayer().getName()});
+        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
             if (getServer().getPluginManager().isPluginEnabled("Essentials") && essTask.chat(evt)) {
                 out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
                         .replace("%2$s", evt.getMessage()), false);

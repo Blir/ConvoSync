@@ -167,7 +167,9 @@ public class ConvoSyncServer {
             try {
                 port = Integer.parseInt(prop);
             } catch (NumberFormatException ex) {
-                LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                if (prop != null) {
+                    LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                }
             }
             prop = p.getProperty("name");
             if (prop != null) {
