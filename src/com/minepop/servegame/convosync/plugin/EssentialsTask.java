@@ -21,11 +21,9 @@ public class EssentialsTask implements Runnable {
     protected EssentialsTask(ConvoSync plugin) {
         this.plugin = plugin;
         Plugin prospective = plugin.getServer().getPluginManager().getPlugin("Essentials");
-        if (prospective != null && prospective instanceof Essentials) {
+        if (prospective instanceof Essentials) {
             ess = (Essentials) prospective;
-            if (ess != null) {
-                plugin.isEss = true;
-            }
+            plugin.isEss = true;
         }
     }
 
@@ -79,7 +77,7 @@ public class EssentialsTask implements Runnable {
     public void remove(String name) {
         users.remove(getUser(name));
     }
-    
+
     public boolean chat(Player player) {
         return !ess.getUser(player.getPlayer().getName()).isVanished();
     }

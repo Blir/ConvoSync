@@ -397,15 +397,15 @@ public class ConvoSyncServer {
                         try {
                             socket.close();
                         } catch (IOException ex2) {
-                            LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
+                            LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                         }
                     }
                 } catch (ClassNotFoundException ex) {
-                    LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
+                    LOGGER.log(Level.SEVERE, "Fatal error in client " + localname, ex);
                     try {
                         socket.close();
                     } catch (IOException ex2) {
-                        LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
+                        LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                     }
                 }
             }
@@ -492,10 +492,17 @@ public class ConvoSyncServer {
                         Main.VERSION), true);
                 for (String element : authReq.PLAYERS) {
                     if (userMap.get(element) != null) {
-                        out(new PlayerMessage(
-                                "You cannot be logged into the client and the game simultaneously.",
-                                element), this);
-                        getClient(element).close(true, true);
+                        Client client = getClient(element);
+                        if (client == null) {
+                            LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
+                                    + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
+                                    element);
+                        } else {
+                            out(new PlayerMessage(
+                                    "You cannot be logged into the client and the game simultaneously.",
+                                    element), this);
+                            client.close(true, true);
+                        }
                     }
                     userMap.put(element, localname);
                 }
@@ -607,16 +614,16 @@ public class ConvoSyncServer {
 
         private void sendMsg(Object obj) {
             if (!alive) {
-                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", this);
+                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", localname);
                 return;
             }
             try {
                 out.writeObject(obj);
                 out.flush();
-                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, this});
+                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, localname});
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
-                    LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, this, ex.toString()});
+                    LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, localname, ex.toString()});
                 }
             }
         }
@@ -955,7 +962,6 @@ public class ConvoSyncServer {
                     }
                 } catch (NoSuchElementException ex) {
                     in = new Scanner(System.in);
-                    LOGGER.log(Level.SEVERE, "{0}", ex.toString());
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
                 }
