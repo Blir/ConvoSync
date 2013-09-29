@@ -416,9 +416,12 @@ public class ConvoSync extends JavaPlugin implements Listener {
         }
         out(new PluginAuthenticationRequest(getServer().getServerName(), password, Main.VERSION, list), true);
         new Thread(new InputTask()).start();
-        if (getServer().getPluginManager().isPluginEnabled("Essentials") && getConfig().getBoolean("notif.afk")) {
+        if (getServer().getPluginManager().isPluginEnabled("Essentials")) {
             essTask = new EssentialsTask(this);
-            new Thread(essTask).start();
+            if (getConfig().getBoolean("notif.afk")) {
+                new Thread(essTask).start();
+            }
+            getServer().getPluginManager().registerEvents(new EssentialsListener(this), this);
         }
         getLogger().info(socket.toString());
     }
@@ -460,7 +463,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         return out(new PrivateMessage(recip, sender, msg, getServer().getServerName()), false);
     }
 
-    private boolean out(Object obj, boolean override) {
+    protected boolean out(Object obj, boolean override) {
         if ((connected && auth) || override) {
             try {
                 out.writeObject(obj);

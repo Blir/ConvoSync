@@ -199,7 +199,7 @@ public class LoginGUI extends javax.swing.JFrame {
                         timeout = 60000;
                     }
                     client.timeout = timeout;
-                    jLabel4.setText("Now using timeout value of " + timeout);
+                    jLabel4.setText("Now using timeout value of " + timeout + " ms");
                 } catch (NumberFormatException ex) {
                     jLabel4.setText("Invalid timeout value: " + input);
                 }

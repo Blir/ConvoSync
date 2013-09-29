@@ -288,6 +288,16 @@ public class ConvoSyncServer {
         }
     }
 
+    private synchronized void vanishPlayer(String s) {
+        Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
+        PlayerListUpdate update = new PlayerListUpdate(userCopy.toArray(new String[userCopy.size()]));
+        for (Client client : clients) {
+            if (client.type == ClientType.APPLICATION && !getUser(client.name).op) {
+                client.sendMsg(update, false);
+            }
+        }
+    }
+
     private synchronized void out(PrivateMessage msg, Client sender) {
         if (sender != null && !sender.auth) {
             return;
@@ -544,6 +554,15 @@ public class ConvoSyncServer {
                             new String[userMap.keySet().size()])), false);
                     out(name + " has joined.", this);
                     userMap.put(name, "CS-Client");
+                    sendPlayerListUpdate();
+                }
+                return;
+            }
+            if (msg instanceof PlayerVanishMessage) {
+                PlayerVanishMessage vmsg = (PlayerVanishMessage) msg;
+                if (vmsg.VANISH) {
+                    vanishPlayer(vmsg.PLAYER);
+                } else {
                     sendPlayerListUpdate();
                 }
                 return;
