@@ -28,8 +28,8 @@ public class EssentialsListener implements Listener {
 
     @EventHandler
     public void onPlayerCommandPreprocessEvent(PlayerCommandPreprocessEvent evt) {
-        plugin.getLogger().log(Level.INFO, "isEss: {0} Canceled: {1} Vanished: {2}",
-                new Object[]{plugin.isEss, evt.isCancelled(), ess.getUser(evt.getPlayer()).isVanished()});
+        plugin.getLogger().log(Level.INFO, "isEss: {0} Canceled: {1} Vanished: {2} Command: {3}",
+                new Object[]{plugin.isEss, evt.isCancelled(), ess.getUser(evt.getPlayer()).isVanished(), evt.getMessage()});
         if (plugin.isEss && !evt.isCancelled() && evt.getMessage().equalsIgnoreCase("vanish")) {
             plugin.out(new PlayerVanishMessage(evt.getPlayer().getName(), !ess.getUser(evt.getPlayer()).isVanished()), false);
         }
