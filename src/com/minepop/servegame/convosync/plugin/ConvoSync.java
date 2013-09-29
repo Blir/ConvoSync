@@ -52,6 +52,11 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         try {
+            new MetricsLite(this).start();
+        } catch (IOException ex) {
+            getLogger().log(Level.WARNING, "Couldn't use MetricsLite: {0}", ex.toString());
+        }
+        try {
             port = getConfig().getInt("port");
             ip = getConfig().getString("ip");
             password = getConfig().getString("password");
