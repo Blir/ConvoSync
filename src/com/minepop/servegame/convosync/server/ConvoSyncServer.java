@@ -290,6 +290,7 @@ public final class ConvoSyncServer {
 
     private synchronized void vanishPlayer(String s) {
         Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
+        userCopy.remove(s);
         PlayerListUpdate update = new PlayerListUpdate(userCopy.toArray(new String[userCopy.size()]));
         for (Client client : clients) {
             if (client.type == ClientType.APPLICATION && !getUser(client.name).op) {
