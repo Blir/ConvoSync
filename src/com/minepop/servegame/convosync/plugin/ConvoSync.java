@@ -549,6 +549,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private void processMessage(Message msg) {
         if (msg instanceof PrivateMessage) {
             PrivateMessage pm = (PrivateMessage) msg;
+            lastPM.put(pm.RECIPIENT, pm.SENDER);
             if (pm.RECIPIENT.equalsIgnoreCase("console")) {
                 getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
                         new Object[]{ChatColor.GOLD, pm.SERVER, pm.SENDER,
