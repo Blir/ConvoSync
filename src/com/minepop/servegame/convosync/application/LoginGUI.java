@@ -2,6 +2,7 @@ package com.minepop.servegame.convosync.application;
 
 import blir.swing.listener.InputListener;
 import blir.swing.quickgui.InputBox;
+import com.minepop.servegame.convosync.Main;
 import java.awt.Cursor;
 
 /**
@@ -16,7 +17,7 @@ public class LoginGUI extends javax.swing.JFrame {
      * Creates new form LoginGUI
      */
     protected LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
-        super(client.toString());
+        super("CS" + Main.VERSION);
         this.client = client;
         initComponents();
         if (ip != null && port != 0) {
