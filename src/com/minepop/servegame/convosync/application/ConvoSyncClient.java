@@ -115,6 +115,10 @@ public final class ConvoSyncClient {
         } catch (NumberFormatException ex) {
             LOGGER.log(Level.WARNING, "Invalid port in saved login info.");
         }
+        login();
+    }
+    
+    protected void login() {
         login = new LoginGUI(this, ip, port, name, password, remember);
         login.setVisible(true);
     }

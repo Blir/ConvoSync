@@ -31,7 +31,7 @@ import java.util.Map;
  *
  * @author Blir
  */
-public class ConvoSync extends JavaPlugin implements Listener {
+public final class ConvoSync extends JavaPlugin implements Listener {
 
     private static enum Action {
 

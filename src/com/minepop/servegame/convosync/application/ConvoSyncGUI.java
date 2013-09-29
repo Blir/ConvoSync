@@ -294,8 +294,9 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onPasswordChangeRequest
 
     private void onLogOut(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogOut
-        log("Logged out.");
         client.disconnect(true);
+        setVisible(false);
+        client.login();
     }//GEN-LAST:event_onLogOut
 
     protected void log(String s) {

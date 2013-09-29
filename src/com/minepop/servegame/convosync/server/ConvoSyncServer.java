@@ -19,7 +19,7 @@ import javax.crypto.*;
  *
  * @author Blir
  */
-public class ConvoSyncServer {
+public final class ConvoSyncServer {
 
     private static enum Command {
 
