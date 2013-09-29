@@ -59,6 +59,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
         jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
         jMenuItem3 = new javax.swing.JMenuItem();
+        jMenuItem5 = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         jMenuItem4 = new javax.swing.JMenuItem();
 
@@ -135,6 +136,15 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             }
         });
         jMenu1.add(jMenuItem3);
+
+        jMenuItem5.setText("Log Out");
+        jMenuItem5.setToolTipText("");
+        jMenuItem5.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onLogOut(evt);
+            }
+        });
+        jMenu1.add(jMenuItem5);
 
         jMenuBar1.add(jMenu1);
 
@@ -283,6 +293,11 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         }, false).setVisible(true);
     }//GEN-LAST:event_onPasswordChangeRequest
 
+    private void onLogOut(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogOut
+        log("Logged out.");
+        client.disconnect(true);
+    }//GEN-LAST:event_onLogOut
+
     protected void log(String s) {
         s = Main.format(s);
         if (jCheckBoxMenuItem1.getState()) {
@@ -349,6 +364,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenuItem jMenuItem4;
+    private javax.swing.JMenuItem jMenuItem5;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;
