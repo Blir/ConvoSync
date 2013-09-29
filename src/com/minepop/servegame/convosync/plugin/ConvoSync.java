@@ -24,6 +24,8 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import static com.minepop.servegame.convosync.Main.format;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
@@ -45,6 +47,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private List<User> users = new ArrayList<User>();
     private EssentialsTask essTask;
     private final ConvoSync PLUGIN = this;
+    private Map<String, String> lastPM = new HashMap<String, String>();
 
     @Override
     public void onEnable() {
@@ -245,7 +248,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 return true;
             }
             if (args[0].equalsIgnoreCase("console")) {
-                sender.sendMessage("You cannot send a private message to a console.");
+                sender.sendMessage("You cannot send a private message to a console cross-server (yet).");
                 return true;
             }
             StringBuilder sb = new StringBuilder();
@@ -253,6 +256,29 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 sb.append(" ").append(args[idx]);
             }
             out(args[0], sender.getName(), sb.toString().substring(1));
+            return true;
+        } else if (cmd.getName().equals("ctellr") && args.length > 0) {
+            String to = lastPM.get(sender.getName());
+            if (to == null) {
+                sender.sendMessage(ChatColor.RED
+                        + "You haven't received any private messages to reply to.");
+                return true;
+            }
+            if (!connected) {
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Disconnected from server.");
+                return true;
+            }
+            if (!auth) {
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Connection is not authenticated.");
+                return true;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int idx = 0; idx < args.length; idx++) {
+                sb.append(" ").append(args[idx]);
+            }
+            out(to, sender.getName(), sb.toString().substring(1));
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
             if (!(sender instanceof Player)) {

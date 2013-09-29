@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.4-dev2.1
+version: 1.0.4-dev2.2
 author: Blir
 softdepend: [Essentials]
 commands:
@@ -33,6 +33,11 @@ commands:
     description: Registers your CS client user account.
     usage: §c/<command>
     permission: convosync.csregister
+    permission-message: §cYou don't have permission to use this command.
+  ctellr:
+    description: Used to reply to cross-server private messages.
+    usage: §c/<command> <message>
+    permission: convosync.ctell
     permission-message: §cYou don't have permission to use this command.
 permissions:
   convosync.*:
