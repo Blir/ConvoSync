@@ -15,7 +15,7 @@ public class LoginGUI extends javax.swing.JFrame {
     /**
      * Creates new form LoginGUI
      */
-    public LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
+    protected LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
         super(client.toString());
         this.client = client;
         initComponents();
@@ -33,6 +33,10 @@ public class LoginGUI extends javax.swing.JFrame {
         jTextField1.setSelectionEnd(jTextField1.getText().length());
         jCheckBox1.setSelected(remember);
         setLocationRelativeTo(null);
+    }
+    
+    protected void setLabel(String s) {
+        jLabel4.setText(s);
     }
 
     /**
@@ -248,9 +252,7 @@ public class LoginGUI extends javax.swing.JFrame {
                 ip = ipAndPort;
             }
             String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()), jCheckBox1.isSelected());
-            if (msg == null) {
-                dispose();
-            } else {
+            if (msg != null) {
                 jLabel4.setText(msg);
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));

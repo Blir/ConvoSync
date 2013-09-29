@@ -218,7 +218,7 @@ public class ConvoSyncServer {
     }
 
     private void restart() throws IOException {
-        close(false);
+        close(false, DisconnectMessage.Reason.RESTARTING);
         open();
     }
 
@@ -227,14 +227,14 @@ public class ConvoSyncServer {
         LOGGER.log(Level.INFO, socket.toString());
     }
 
-    private synchronized void close(boolean force) throws IOException {
+    private synchronized void close(boolean force, DisconnectMessage.Reason reason) throws IOException {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             socket.close();
         } finally {
             try {
                 for (Client client : clients) {
-                    client.close(false, true);
+                    client.close(false, true, reason);
                 }
             } finally {
                 userMap.clear();
@@ -405,7 +405,7 @@ public class ConvoSyncServer {
                 } catch (IOException ex) {
                     if (!socket.isClosed()) {
                         try {
-                            completelyClose(false);
+                            completelyClose(false, DisconnectMessage.Reason.CRASHED);
                         } catch (IOException ex2) {
                             LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                         }
@@ -413,7 +413,7 @@ public class ConvoSyncServer {
                 } catch (ClassNotFoundException ex) {
                     LOGGER.log(Level.SEVERE, "Fatal error in client " + localname, ex);
                     try {
-                        completelyClose(false);
+                        completelyClose(false, DisconnectMessage.Reason.CRASHED);
                     } catch (IOException ex2) {
                         LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                     }
@@ -471,7 +471,7 @@ public class ConvoSyncServer {
                                         + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
                                         element);
                             } else {
-                                client.close(true, true);
+                                client.close(true, true, DisconnectMessage.Reason.KICKED);
                                 clients.remove(client);
                             }
                         }
@@ -511,7 +511,7 @@ public class ConvoSyncServer {
                             out(new PlayerMessage(
                                     "You cannot be logged into the client and the game simultaneously.",
                                     element), this);
-                            client.close(true, true);
+                            client.close(true, true, DisconnectMessage.Reason.KICKED);
                         }
                     }
                     userMap.put(element, localname);
@@ -607,7 +607,7 @@ public class ConvoSyncServer {
             }
             if (msg instanceof DisconnectMessage) {
                 try {
-                    completelyClose(false);
+                    completelyClose(false, null);
                 } catch (ConcurrentModificationException ex) {
                     LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
                 }
@@ -647,9 +647,9 @@ public class ConvoSyncServer {
             }
         }
 
-        private void close(boolean kick, boolean msg) throws IOException {
+        private void close(boolean kick, boolean msg, DisconnectMessage.Reason reason) throws IOException {
             if (msg) {
-                sendMsg(new DisconnectMessage(), true);
+                sendMsg(new DisconnectMessage(reason), true);
             }
             alive = false;
             socket.close();
@@ -664,9 +664,9 @@ public class ConvoSyncServer {
             sendPlayerListUpdate();
         }
 
-        private synchronized void completelyClose(boolean msg) throws IOException {
+        private synchronized void completelyClose(boolean msg, DisconnectMessage.Reason reason) throws IOException {
             clients.remove(this);
-            close(false, msg);
+            close(false, msg, reason);
         }
 
         @Override
@@ -742,7 +742,8 @@ public class ConvoSyncServer {
                 }
                 try {
                     close(args != null && args.length > 0
-                            && args[0].equalsIgnoreCase("force"));
+                            && args[0].equalsIgnoreCase("force"),
+                            DisconnectMessage.Reason.RESTARTING);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
@@ -791,7 +792,7 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.completelyClose(true);
+                            client.completelyClose(true, DisconnectMessage.Reason.KICKED);
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
@@ -873,7 +874,7 @@ public class ConvoSyncServer {
                         Client client = getClient(args[1]);
                         if (client != null) {
                             try {
-                                client.close(true, true);
+                                client.close(true, true, DisconnectMessage.Reason.KICKED);
                             } catch (IOException ex) {
                                 LOGGER.log(Level.INFO, "Error closing client.", ex);
                             }

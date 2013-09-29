@@ -610,8 +610,25 @@ public class ConvoSync extends JavaPlugin implements Listener {
             return;
         }
         if (msg instanceof DisconnectMessage) {
-            getServer().broadcastMessage(ChatColor.RED
-                    + "The ConvoSync server has disconnected this server.");
+            String toBroadcast;
+            switch (((DisconnectMessage) msg).REASON) {
+                case RESTARTING:
+                    toBroadcast = "The ConvoSync server is restarting.";
+                    break;
+                case CLOSING:
+                    toBroadcast = "The ConvoSync server has shut down.";
+                    break;
+                case KICKED:
+                    toBroadcast = "This Minecraft server has been kicked from the ConvoSync server.";
+                    break;
+                case CRASHED:
+                    toBroadcast = "Something went wrong, and we're now disconnected from the ConvoSync server.";
+                    break;
+                default:
+                    toBroadcast = "This server has been disconnected from the ConvoSync server for an unknown reason.";
+                    break;
+            }
+            getServer().broadcastMessage(ChatColor.RED + toBroadcast);
             connected = false;
             shouldBe = false;
             auth = false;

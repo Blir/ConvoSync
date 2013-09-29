@@ -22,7 +22,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     /**
      * Creates new form ConvoSyncGUI
      */
-    public ConvoSyncGUI(ConvoSyncClient client) {
+    protected ConvoSyncGUI(ConvoSyncClient client) {
         super(client.toString());
         this.client = client;
         initComponents();
@@ -283,7 +283,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         }, false).setVisible(true);
     }//GEN-LAST:event_onPasswordChangeRequest
 
-    public void log(String s) {
+    protected void log(String s) {
         s = Main.format(s);
         if (jCheckBoxMenuItem1.getState()) {
             CAL.setTimeInMillis(System.currentTimeMillis());
@@ -304,37 +304,37 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         output.setText(output.getText() + "\n" + s);
     }
 
-    public void log(String s, Object... objects) {
+    protected void log(String s, Object... objects) {
         for (int idx = 0; idx < objects.length; idx++) {
             s = s.replace("{" + idx + "}", String.valueOf(objects[idx]));
         }
     }
 
-    public void logChat(String s) {
+    protected void logChat(String s) {
         log("[" + client.name + "] " + s);
     }
 
-    public void setText(String s) {
+    protected void setText(String s) {
         output.setText(s);
     }
 
-    public void addToUserList(String elem) {
+    protected void addToUserList(String elem) {
         model.addElement(elem);
     }
 
-    public boolean removeFromUserList(String elem) {
+    protected boolean removeFromUserList(String elem) {
         return model.removeElement(elem);
     }
 
-    public void clearUserList() {
+    protected void clearUserList() {
         model.clear();
     }
 
-    public void cls() {
+    protected void cls() {
         output.setText("");
     }
 
-    public boolean useTimeStamps() {
+    protected boolean useTimeStamps() {
         return jCheckBoxMenuItem1.getState();
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
