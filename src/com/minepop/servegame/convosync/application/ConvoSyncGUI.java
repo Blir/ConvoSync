@@ -297,6 +297,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         client.disconnect(true);
         setVisible(false);
         client.login();
+        cls();
     }//GEN-LAST:event_onLogOut
 
     protected void log(String s) {
