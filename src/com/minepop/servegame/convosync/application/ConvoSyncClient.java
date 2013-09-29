@@ -7,7 +7,6 @@ import com.minepop.servegame.convosync.net.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.util.Properties;
 import java.util.logging.*;
 import javax.swing.UnsupportedLookAndFeelException;
@@ -271,12 +270,12 @@ public final class ConvoSyncClient {
                         break;
                     case INVALID_PASSWORD:
                         gui.log("Invalid password.");
+                        password = null;
                         break;
                     case LOGGED_IN:
                         gui.log("You're already logged in.");
                         break;
                 }
-                password = null;
                 disconnect(true);
                 new LoginGUI(this, ip, port, name, null, remember).setVisible(true);
                 return;

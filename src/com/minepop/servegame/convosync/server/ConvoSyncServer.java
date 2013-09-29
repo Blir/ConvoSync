@@ -24,7 +24,7 @@ public class ConvoSyncServer {
     private static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
-        USERS, NAME, HELP, DEBUG, VERSION
+        USERS, NAME, HELP, DEBUG, VERSION, CONFIG
     }
 
     private static enum SubCommand {
@@ -901,7 +901,8 @@ public class ConvoSyncServer {
                         + "/name [name]               - Sets your name to the given name.\n"
                         + "/help                      - Prints all commands.\n"
                         + "/debug                     - Toggles debug mode.\n"
-                        + "/version                   - Displays version info.");
+                        + "/version                   - Displays version info.\n"
+                        + "/config                    - Generates the server config properties.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
@@ -918,6 +919,26 @@ public class ConvoSyncServer {
                 break;
             case VERSION:
                 LOGGER.log(Level.INFO, "v{0}", Main.VERSION);
+                break;
+            case CONFIG:
+                Properties p = new Properties();
+                p.setProperty("plugin-password", pluginPassword);
+                p.setProperty("name", name);
+                p.setProperty("port", String.valueOf(port));
+                FileOutputStream fos = null;
+                try {
+                    try {
+                        fos = new FileOutputStream("CS-Server.properties");
+                        p.store(fos, null);
+                        LOGGER.log(Level.INFO, "Config generated.");
+                    } finally {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                    }
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "Could not generate config: {0}", ex.toString());
+                }
                 break;
         }
     }
@@ -980,6 +1001,7 @@ public class ConvoSyncServer {
                         }
                     }
                 } catch (NoSuchElementException ex) {
+                    LOGGER.log(Level.WARNING, "Input terminated.");
                     in = new Scanner(System.in);
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);

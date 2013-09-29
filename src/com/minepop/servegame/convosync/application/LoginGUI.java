@@ -3,7 +3,6 @@ package com.minepop.servegame.convosync.application;
 import blir.swing.listener.InputListener;
 import blir.swing.quickgui.InputBox;
 import java.awt.Cursor;
-import java.util.Properties;
 
 /**
  *
