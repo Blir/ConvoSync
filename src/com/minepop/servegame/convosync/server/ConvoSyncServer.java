@@ -9,25 +9,22 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.*;
-import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
-import static com.minepop.servegame.convosync.Main.format;
+import static com.minepop.servegame.convosync.Main.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
+import javax.crypto.*;
 
 /**
  *
  * @author Blir
  */
-public class ConvoSyncServer {
+public final class ConvoSyncServer {
 
     private static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
-        USERS, NAME, HELP, DEBUG, VERSION
+        USERS, NAME, HELP, DEBUG, VERSION, CONFIG
     }
 
     private static enum SubCommand {
@@ -63,12 +60,17 @@ public class ConvoSyncServer {
         consoleHandler.setFormatter(formatter);
         consoleHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(consoleHandler);
-        fileHandler = new FileHandler("CS-Server.log", true);
+        File log = new File("CS-Server.log");
+        for (int idx = 0; log.length() > 5242880; idx++) {
+            log = new File("CS-Server" + idx + ".log");
+        }
+        fileHandler = new FileHandler(log.getName(), true);
         fileHandler.setFormatter(formatter);
         fileHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
+        LOGGER.log(Level.CONFIG, "Logging to {0}", log.getName());
         new ConvoSyncServer().run(args);
     }
 
@@ -129,15 +131,21 @@ public class ConvoSyncServer {
         Properties p = null;
         try {
             p = new Properties();
-            FileInputStream fis = new FileInputStream(new File("CS-Server.properties"));
-            p.load(fis);
+            FileInputStream fis = null;
+            try {
+                fis = new FileInputStream(new File("CS-Server.properties"));
+                p.load(fis);
+            } finally {
+                if (fis != null) {
+                    fis.close();
+                }
+            }
             String prop = p.getProperty("chat-color");
             chatColor = prop == null ? '\u0000' : prop.charAt(0);
             LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
             prop = p.getProperty("use-prefixes");
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
-            fis.close();
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -160,10 +168,13 @@ public class ConvoSyncServer {
             }
         }
         if (p != null) {
-            String prop;
+            String prop = p.getProperty("port");
             try {
-                port = Integer.parseInt(p.getProperty("port"));
-            } catch (NumberFormatException ignore) {
+                port = Integer.parseInt(prop);
+            } catch (NumberFormatException ex) {
+                if (prop != null) {
+                    LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                }
             }
             prop = p.getProperty("name");
             if (prop != null) {
@@ -207,7 +218,7 @@ public class ConvoSyncServer {
     }
 
     private void restart() throws IOException {
-        close(false);
+        close(false, DisconnectMessage.Reason.RESTARTING);
         open();
     }
 
@@ -216,14 +227,14 @@ public class ConvoSyncServer {
         LOGGER.log(Level.INFO, socket.toString());
     }
 
-    private synchronized void close(boolean force) throws IOException {
+    private synchronized void close(boolean force, DisconnectMessage.Reason reason) throws IOException {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             socket.close();
         } finally {
             try {
                 for (Client client : clients) {
-                    client.close(false, true);
+                    client.close(false, true, reason);
                 }
             } finally {
                 userMap.clear();
@@ -272,6 +283,17 @@ public class ConvoSyncServer {
         PlayerListUpdate update = new PlayerListUpdate(list);
         for (Client client : clients) {
             if (client.type == ClientType.APPLICATION && client.auth) {
+                client.sendMsg(update, false);
+            }
+        }
+    }
+
+    private synchronized void vanishPlayer(String s) {
+        Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
+        userCopy.remove(s);
+        PlayerListUpdate update = new PlayerListUpdate(userCopy.toArray(new String[userCopy.size()]));
+        for (Client client : clients) {
+            if (client.type == ClientType.APPLICATION && !getUser(client.name).op) {
                 client.sendMsg(update, false);
             }
         }
@@ -384,17 +406,17 @@ public class ConvoSyncServer {
                 } catch (IOException ex) {
                     if (!socket.isClosed()) {
                         try {
-                            socket.close();
+                            completelyClose(false, DisconnectMessage.Reason.CRASHED);
                         } catch (IOException ex2) {
-                            LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
+                            LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                         }
                     }
                 } catch (ClassNotFoundException ex) {
-                    LOGGER.log(Level.SEVERE, "Fatal error in client " + this, ex);
+                    LOGGER.log(Level.SEVERE, "Fatal error in client " + localname, ex);
                     try {
-                        socket.close();
+                        completelyClose(false, DisconnectMessage.Reason.CRASHED);
                     } catch (IOException ex2) {
-                        LOGGER.log(Level.WARNING, "Error disconnecting client " + this, ex2);
+                        LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
                     }
                 }
             }
@@ -450,7 +472,7 @@ public class ConvoSyncServer {
                                         + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
                                         element);
                             } else {
-                                client.close(true, true);
+                                client.close(true, true, DisconnectMessage.Reason.KICKED);
                                 clients.remove(client);
                             }
                         }
@@ -481,10 +503,17 @@ public class ConvoSyncServer {
                         Main.VERSION), true);
                 for (String element : authReq.PLAYERS) {
                     if (userMap.get(element) != null) {
-                        out(new PlayerMessage(
-                                "You cannot be logged into the client and the game simultaneously.",
-                                element), this);
-                        getClient(element).close(true, true);
+                        Client client = getClient(element);
+                        if (client == null) {
+                            LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
+                                    + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
+                                    element);
+                        } else {
+                            out(new PlayerMessage(
+                                    "You cannot be logged into the client and the game simultaneously.",
+                                    element), this);
+                            client.close(true, true, DisconnectMessage.Reason.KICKED);
+                        }
                     }
                     userMap.put(element, localname);
                 }
@@ -530,6 +559,15 @@ public class ConvoSyncServer {
                 }
                 return;
             }
+            if (msg instanceof PlayerVanishMessage) {
+                PlayerVanishMessage vmsg = (PlayerVanishMessage) msg;
+                if (vmsg.VANISH) {
+                    vanishPlayer(vmsg.PLAYER);
+                } else {
+                    sendPlayerListUpdate();
+                }
+                return;
+            }
             if (msg instanceof SetEnabledProperty) {
                 enabled = ((SetEnabledProperty) msg).ENABLED;
                 out(name + " has " + (enabled ? "enabled" : "disabled")
@@ -570,7 +608,7 @@ public class ConvoSyncServer {
             }
             if (msg instanceof DisconnectMessage) {
                 try {
-                    completelyClose(false);
+                    completelyClose(false, null);
                 } catch (ConcurrentModificationException ex) {
                     LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
                 }
@@ -596,23 +634,23 @@ public class ConvoSyncServer {
 
         private void sendMsg(Object obj) {
             if (!alive) {
-                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", this);
+                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", localname);
                 return;
             }
             try {
                 out.writeObject(obj);
                 out.flush();
-                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, this});
+                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, localname});
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
-                    LOGGER.log(Level.SEVERE, "Could not write object " + obj, ex);
+                    LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, localname, ex.toString()});
                 }
             }
         }
 
-        private void close(boolean kick, boolean msg) throws IOException {
+        private void close(boolean kick, boolean msg, DisconnectMessage.Reason reason) throws IOException {
             if (msg) {
-                sendMsg(new DisconnectMessage(), true);
+                sendMsg(new DisconnectMessage(reason), true);
             }
             alive = false;
             socket.close();
@@ -627,9 +665,9 @@ public class ConvoSyncServer {
             sendPlayerListUpdate();
         }
 
-        private synchronized void completelyClose(boolean msg) throws IOException {
+        private synchronized void completelyClose(boolean msg, DisconnectMessage.Reason reason) throws IOException {
             clients.remove(this);
-            close(false, msg);
+            close(false, msg, reason);
         }
 
         @Override
@@ -679,18 +717,24 @@ public class ConvoSyncServer {
                     }
                 }
                 try {
-                    PrintWriter pw = new PrintWriter("banlist.txt");
-                    for (String elem : banlist) {
-                        pw.println(elem);
+                    PrintWriter pw = null;
+                    try {
+                        pw = new PrintWriter("banlist.txt");
+                        for (String elem : banlist) {
+                            pw.println(elem);
+                        }
+                    } finally {
+                        if (pw != null) {
+                            pw.close();
+                        }
                     }
-                    pw.close();
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error saving ban list.", ex);
                 }
                 try {
                     Properties p = new Properties();
                     FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
-                    p.setProperty("chat-color", Character.toString(chatColor));
+                    p.setProperty("chat-color", String.valueOf(chatColor));
                     p.setProperty("use-prefixes", String.valueOf(prefix));
                     p.store(fos, null);
                     fos.close();
@@ -699,7 +743,8 @@ public class ConvoSyncServer {
                 }
                 try {
                     close(args != null && args.length > 0
-                            && args[0].equalsIgnoreCase("force"));
+                            && args[0].equalsIgnoreCase("force"),
+                            DisconnectMessage.Reason.RESTARTING);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
@@ -748,7 +793,7 @@ public class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.completelyClose(true);
+                            client.completelyClose(true, DisconnectMessage.Reason.KICKED);
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
@@ -830,7 +875,7 @@ public class ConvoSyncServer {
                         Client client = getClient(args[1]);
                         if (client != null) {
                             try {
-                                client.close(true, true);
+                                client.close(true, true, DisconnectMessage.Reason.KICKED);
                             } catch (IOException ex) {
                                 LOGGER.log(Level.INFO, "Error closing client.", ex);
                             }
@@ -858,7 +903,8 @@ public class ConvoSyncServer {
                         + "/name [name]               - Sets your name to the given name.\n"
                         + "/help                      - Prints all commands.\n"
                         + "/debug                     - Toggles debug mode.\n"
-                        + "/version                   - Displays version info.");
+                        + "/version                   - Displays version info.\n"
+                        + "/config                    - Generates the server config properties.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
@@ -875,6 +921,26 @@ public class ConvoSyncServer {
                 break;
             case VERSION:
                 LOGGER.log(Level.INFO, "v{0}", Main.VERSION);
+                break;
+            case CONFIG:
+                Properties p = new Properties();
+                p.setProperty("plugin-password", pluginPassword);
+                p.setProperty("name", name);
+                p.setProperty("port", String.valueOf(port));
+                FileOutputStream fos = null;
+                try {
+                    try {
+                        fos = new FileOutputStream("CS-Server.properties");
+                        p.store(fos, null);
+                        LOGGER.log(Level.INFO, "Config generated.");
+                    } finally {
+                        if (fos != null) {
+                            fos.close();
+                        }
+                    }
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "Could not generate config: {0}", ex.toString());
+                }
                 break;
         }
     }
@@ -936,6 +1002,9 @@ public class ConvoSyncServer {
                             out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                         }
                     }
+                } catch (NoSuchElementException ex) {
+                    LOGGER.log(Level.WARNING, "Input terminated.");
+                    in = new Scanner(System.in);
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
                 }

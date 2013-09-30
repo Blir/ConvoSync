@@ -21,18 +21,16 @@ public class EssentialsTask implements Runnable {
     protected EssentialsTask(ConvoSync plugin) {
         this.plugin = plugin;
         Plugin prospective = plugin.getServer().getPluginManager().getPlugin("Essentials");
-        if (prospective != null && prospective instanceof Essentials) {
+        if (prospective instanceof Essentials) {
             ess = (Essentials) prospective;
-            if (ess != null) {
-                plugin.isEss = true;
-            }
+            plugin.isEss = true;
         }
     }
 
     @Override
     public void run() {
         if (plugin.isEss) {
-            plugin.getLogger().info("Essentials AFK Thread started!");
+            plugin.getLogger().info("Essentials Task started!");
         }
         while (plugin.connected && plugin.isEss) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
@@ -49,7 +47,7 @@ public class EssentialsTask implements Runnable {
                 Thread.sleep(250);
             } catch (InterruptedException ex) {
                 plugin.isEss = false;
-                plugin.getLogger().warning("Essentials AFK Thread has crashed!");
+                return;
             }
         }
     }
@@ -79,9 +77,9 @@ public class EssentialsTask implements Runnable {
     public void remove(String name) {
         users.remove(getUser(name));
     }
-    
-    public boolean chat(AsyncPlayerChatEvent evt) {
-        return !ess.getUser(evt.getPlayer().getName()).isVanished();
+
+    public boolean chat(Player player) {
+        return !ess.getUser(player.getPlayer().getName()).isVanished();
     }
 
     private static class User {

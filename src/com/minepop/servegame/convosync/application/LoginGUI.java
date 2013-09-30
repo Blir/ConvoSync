@@ -1,7 +1,9 @@
 package com.minepop.servegame.convosync.application;
 
+import blir.swing.listener.InputListener;
+import blir.swing.quickgui.InputBox;
+import com.minepop.servegame.convosync.Main;
 import java.awt.Cursor;
-import java.util.Properties;
 
 /**
  *
@@ -14,8 +16,8 @@ public class LoginGUI extends javax.swing.JFrame {
     /**
      * Creates new form LoginGUI
      */
-    public LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
-        super(client.toString());
+    protected LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
+        super("CS" + Main.VERSION);
         this.client = client;
         initComponents();
         if (ip != null && port != 0) {
@@ -32,6 +34,10 @@ public class LoginGUI extends javax.swing.JFrame {
         jTextField1.setSelectionEnd(jTextField1.getText().length());
         jCheckBox1.setSelected(remember);
         setLocationRelativeTo(null);
+    }
+    
+    protected void setLabel(String s) {
+        jLabel4.setText(s);
     }
 
     /**
@@ -53,6 +59,9 @@ public class LoginGUI extends javax.swing.JFrame {
         jProgressBar1 = new javax.swing.JProgressBar();
         jLabel4 = new javax.swing.JLabel();
         jCheckBox1 = new javax.swing.JCheckBox();
+        jMenuBar1 = new javax.swing.JMenuBar();
+        jMenu1 = new javax.swing.JMenu();
+        jMenuItem1 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         setResizable(false);
@@ -94,6 +103,20 @@ public class LoginGUI extends javax.swing.JFrame {
 
         jCheckBox1.setText("Remember Login Info");
 
+        jMenu1.setText("Advanced");
+
+        jMenuItem1.setText("Change Timeout");
+        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onChangeConnectionTimeout(evt);
+            }
+        });
+        jMenu1.add(jMenuItem1);
+
+        jMenuBar1.add(jMenu1);
+
+        setJMenuBar(jMenuBar1);
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
@@ -101,7 +124,6 @@ public class LoginGUI extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(layout.createSequentialGroup()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel2)
@@ -112,11 +134,12 @@ public class LoginGUI extends javax.swing.JFrame {
                             .addComponent(jTextField1)
                             .addComponent(jPasswordField1)
                             .addComponent(jTextField2)))
-                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
                         .addComponent(jCheckBox1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                        .addComponent(jButton1)))
+                        .addComponent(jButton1))
+                    .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(jProgressBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -138,11 +161,11 @@ public class LoginGUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1)
                     .addComponent(jCheckBox1))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jLabel4)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jProgressBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap())
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -166,6 +189,28 @@ public class LoginGUI extends javax.swing.JFrame {
         jLabel4.setText("Connecting...");
         new Thread(new ConnectTask()).start();
     }//GEN-LAST:event_onLogin
+
+    private void onChangeConnectionTimeout(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onChangeConnectionTimeout
+        new InputBox("ConvoSyncClient - Change Connection Timeout", "Enter a connection timeout value in milliseconds: ", new InputListener() {
+            @Override
+            public void onInput(String input) {
+                try {
+                    int timeout = Integer.parseInt(input);
+                    if (timeout < 5000) {
+                        timeout = 5000;
+                    }
+                    if (timeout > 60000) {
+                        timeout = 60000;
+                    }
+                    client.timeout = timeout;
+                    jLabel4.setText("Now using timeout value of " + timeout + " ms");
+                } catch (NumberFormatException ex) {
+                    jLabel4.setText("Invalid timeout value: " + input);
+                }
+            }
+        }, false).setVisible(true);
+    }//GEN-LAST:event_onChangeConnectionTimeout
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JCheckBox jCheckBox1;
@@ -173,6 +218,9 @@ public class LoginGUI extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
+    private javax.swing.JMenu jMenu1;
+    private javax.swing.JMenuBar jMenuBar1;
+    private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JPasswordField jPasswordField1;
     private javax.swing.JProgressBar jProgressBar1;
     private javax.swing.JTextField jTextField1;
@@ -205,9 +253,7 @@ public class LoginGUI extends javax.swing.JFrame {
                 ip = ipAndPort;
             }
             String msg = client.connect(ip, port, String.valueOf(jPasswordField1.getPassword()), jCheckBox1.isSelected());
-            if (msg == null) {
-                dispose();
-            } else {
+            if (msg != null) {
                 jLabel4.setText(msg);
             }
             setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));

@@ -1,6 +1,6 @@
 name: ConvoSync
 main: com.minepop.servegame.convosync.plugin.ConvoSync
-version: 1.0.3
+version: 1.0.4
 author: Blir
 softdepend: [Essentials]
 commands:
@@ -34,6 +34,11 @@ commands:
     usage: §c/<command>
     permission: convosync.csregister
     permission-message: §cYou don't have permission to use this command.
+  ctellr:
+    description: Used to reply to cross-server private messages.
+    usage: §c/<command> <message>
+    permission: convosync.ctell
+    permission-message: §cYou don't have permission to use this command.
 permissions:
   convosync.*:
     children:
@@ -48,6 +53,7 @@ permissions:
   convosync.csay:
     description: Allows use of the /csay command.
   convosync.ctell:
+    default: true
     description: Allows use of the /ctell command.
   convosync.ccmd:
     description: Allows use of the /ccmd command.

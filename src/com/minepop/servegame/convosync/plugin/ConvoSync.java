@@ -24,12 +24,14 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import static com.minepop.servegame.convosync.Main.format;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  *
  * @author Blir
  */
-public class ConvoSync extends JavaPlugin implements Listener {
+public final class ConvoSync extends JavaPlugin implements Listener {
 
     private static enum Action {
 
@@ -45,9 +47,15 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private List<User> users = new ArrayList<User>();
     private EssentialsTask essTask;
     private final ConvoSync PLUGIN = this;
+    private Map<String, String> lastPM = new HashMap<String, String>();
 
     @Override
     public void onEnable() {
+        try {
+            new MetricsLite(this).start();
+        } catch (IOException ex) {
+            getLogger().log(Level.WARNING, "Couldn't use MetricsLite: {0}", ex.toString());
+        }
         try {
             port = getConfig().getInt("port");
             ip = getConfig().getString("ip");
@@ -245,7 +253,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 return true;
             }
             if (args[0].equalsIgnoreCase("console")) {
-                sender.sendMessage("You cannot send a private message to a console.");
+                sender.sendMessage("You cannot send a private message to a console cross-server (yet).");
                 return true;
             }
             StringBuilder sb = new StringBuilder();
@@ -253,6 +261,29 @@ public class ConvoSync extends JavaPlugin implements Listener {
                 sb.append(" ").append(args[idx]);
             }
             out(args[0], sender.getName(), sb.toString().substring(1));
+            return true;
+        } else if (cmd.getName().equals("ctellr") && args.length > 0) {
+            String to = lastPM.get(sender.getName());
+            if (to == null) {
+                sender.sendMessage(ChatColor.RED
+                        + "You haven't received any private messages to reply to.");
+                return true;
+            }
+            if (!connected) {
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Disconnected from server.");
+                return true;
+            }
+            if (!auth) {
+                sender.sendMessage(ChatColor.RED
+                        + "Cannot send message : Connection is not authenticated.");
+                return true;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (int idx = 0; idx < args.length; idx++) {
+                sb.append(" ").append(args[idx]);
+            }
+            out(to, sender.getName(), sb.toString().substring(1));
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
             if (!(sender instanceof Player)) {
@@ -339,7 +370,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAsyncPlayerChat(AsyncPlayerChatEvent evt) {
-        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled && (!getServer().getPluginManager().isPluginEnabled("Essentials") || essTask.chat(evt))) {
+        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
             out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
                     .replace("%2$s", evt.getMessage()), false);
         }
@@ -353,7 +384,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
                     + "Cross-server chat is now disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
         }
-        if (getUser(evt.getPlayer().getName()).enabled) {
+        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
             out(evt.getJoinMessage(), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), true), false);
@@ -384,7 +415,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
             out(new SetEnabledProperty(true), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
-        if (getUser(evt.getPlayer().getName()).enabled) {
+        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
             out(evt.getQuitMessage(), false);
         }
         if (essTask != null) {
@@ -414,9 +445,12 @@ public class ConvoSync extends JavaPlugin implements Listener {
         }
         out(new PluginAuthenticationRequest(getServer().getServerName(), password, Main.VERSION, list), true);
         new Thread(new InputTask()).start();
-        if (getServer().getPluginManager().isPluginEnabled("Essentials") && getConfig().getBoolean("notif.afk")) {
+        if (getServer().getPluginManager().isPluginEnabled("Essentials")) {
             essTask = new EssentialsTask(this);
-            new Thread(essTask).start();
+            if (getConfig().getBoolean("notif.afk")) {
+                new Thread(essTask).start();
+            }
+            getServer().getPluginManager().registerEvents(new EssentialsListener(this), this);
         }
         getLogger().info(socket.toString());
     }
@@ -458,7 +492,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
         return out(new PrivateMessage(recip, sender, msg, getServer().getServerName()), false);
     }
 
-    private boolean out(Object obj, boolean override) {
+    protected boolean out(Object obj, boolean override) {
         if ((connected && auth) || override) {
             try {
                 out.writeObject(obj);
@@ -520,6 +554,7 @@ public class ConvoSync extends JavaPlugin implements Listener {
     private void processMessage(Message msg) {
         if (msg instanceof PrivateMessage) {
             PrivateMessage pm = (PrivateMessage) msg;
+            lastPM.put(pm.RECIPIENT, pm.SENDER);
             if (pm.RECIPIENT.equalsIgnoreCase("console")) {
                 getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
                         new Object[]{ChatColor.GOLD, pm.SERVER, pm.SENDER,
@@ -607,8 +642,25 @@ public class ConvoSync extends JavaPlugin implements Listener {
             return;
         }
         if (msg instanceof DisconnectMessage) {
-            getServer().broadcastMessage(ChatColor.RED
-                    + "The ConvoSync server has disconnected this server.");
+            String toBroadcast;
+            switch (((DisconnectMessage) msg).REASON) {
+                case RESTARTING:
+                    toBroadcast = "The ConvoSync server is restarting.";
+                    break;
+                case CLOSING:
+                    toBroadcast = "The ConvoSync server has shut down.";
+                    break;
+                case KICKED:
+                    toBroadcast = "This Minecraft server has been kicked from the ConvoSync server.";
+                    break;
+                case CRASHED:
+                    toBroadcast = "Something went wrong, and we're now disconnected from the ConvoSync server.";
+                    break;
+                default:
+                    toBroadcast = "This server has been disconnected from the ConvoSync server for an unknown reason.";
+                    break;
+            }
+            getServer().broadcastMessage(ChatColor.RED + toBroadcast);
             connected = false;
             shouldBe = false;
             auth = false;

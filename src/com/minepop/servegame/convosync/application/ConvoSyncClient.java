@@ -5,6 +5,7 @@ import blir.util.logging.CompactFormatter;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Properties;
 import java.util.logging.*;
@@ -17,15 +18,17 @@ import javax.swing.UnsupportedLookAndFeelException;
 public final class ConvoSyncClient {
 
     private ConvoSyncGUI gui;
+    private LoginGUI login;
     protected String name;
     private String ip, password;
     private int port;
+    protected int timeout = 20000;
     private Socket socket;
     protected boolean pm, connected, auth;
     private boolean remember;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
+    protected static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
 
     /**
      * @param args the command line arguments
@@ -112,7 +115,12 @@ public final class ConvoSyncClient {
         } catch (NumberFormatException ex) {
             LOGGER.log(Level.WARNING, "Invalid port in saved login info.");
         }
-        new LoginGUI(this, ip, port, name, password, remember).setVisible(true);
+        login();
+    }
+    
+    protected void login() {
+        login = new LoginGUI(this, ip, port, name, password, remember);
+        login.setVisible(true);
     }
 
     protected String reconnect() {
@@ -149,14 +157,14 @@ public final class ConvoSyncClient {
         try {
             gui.clearUserList();
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
-            socket = new Socket(ip, port);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(ip, port), timeout);
             in = new ObjectInputStream(socket.getInputStream());
             out = new ObjectOutputStream(socket.getOutputStream());
             connected = true;
             out(new ApplicationAuthenticationRequest(name, password, Main.VERSION));
             new Thread(new InputTask()).start();
             LOGGER.log(Level.INFO, "{0}", socket);
-            gui.setVisible(true);
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, ex.toString());
             return ex.getMessage();
@@ -230,7 +238,7 @@ public final class ConvoSyncClient {
         if (msg instanceof PrivateMessage) {
             PrivateMessage pmsg = (PrivateMessage) msg;
             gui.log("[[" + pmsg.SERVER + "] " + pmsg.SENDER + "] -> me] " + pmsg.MSG);
-            out(new PlayerMessage("[me -> [CS-Client] " + name + "]] " + pmsg.MSG, pmsg.SENDER));
+            out(new PlayerMessage(Main.COLOR_CHAR + "6[me -> [CS-Client]" + name + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
             return;
         }
         if (msg instanceof PlayerMessage) {
@@ -259,26 +267,47 @@ public final class ConvoSyncClient {
                         + ", ConvoSync server version " + response.VERSION);
             }
             if (auth) {
+                if (login != null) {
+                    login.setVisible(false);
+                    login = null;
+                }
+                gui.setVisible(true);
                 gui.log("Connected.");
             } else {
                 switch (((AuthenticationRequestResponse) msg).REASON) {
                     case INVALID_USER:
-                        gui.log("Invalid user name.");
+                        login.setLabel("Invalid user name.");
                         break;
                     case INVALID_PASSWORD:
-                        gui.log("Invalid password.");
+                        login.setLabel("Invalid password.");
+                        password = null;
                         break;
                     case LOGGED_IN:
-                        gui.log("You're already logged in.");
+                        login.setLabel("You're already logged in.");
                         break;
                 }
-                password = null;
                 disconnect(true);
-                new LoginGUI(this, ip, port, name, null, remember).setVisible(true);
                 return;
             }
             if (msg instanceof DisconnectMessage) {
-                gui.log("The server has disconnected you.");
+                switch (((DisconnectMessage) msg).REASON) {
+                    case RESTARTING:
+                        gui.log("The ConvoSync server is restarting.");
+                        break;
+                    case CLOSING:
+                        gui.log("The ConvoSync server has shut down.");
+                        break;
+                    case KICKED:
+                        gui.log("You have been kicked.");
+                        break;
+                    case CRASHED:
+                        gui.log("Something went wrong, and your server-side thread crashed.\n"
+                                + "Contact a server administrator.");
+                        break;
+                    default:
+                        gui.log("You've been disconnected and I don't know why.");
+                        break;
+                }
                 disconnect(false);
             }
         }
