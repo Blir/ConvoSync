@@ -28,7 +28,7 @@ public final class ConvoSyncClient {
     private boolean remember;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
+    protected static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
 
     /**
      * @param args the command line arguments

@@ -6,7 +6,10 @@ import blir.swing.quickgui.NewPasswordBox;
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
 import java.awt.Cursor;
+import java.net.URISyntaxException;
 import java.util.Calendar;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -55,13 +58,16 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenuItem1 = new javax.swing.JMenuItem();
-        jMenuItem2 = new javax.swing.JMenuItem();
-        jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
-        jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
-        jMenuItem3 = new javax.swing.JMenuItem();
         jMenuItem5 = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         jMenuItem4 = new javax.swing.JMenuItem();
+        jMenu3 = new javax.swing.JMenu();
+        jMenuItem2 = new javax.swing.JMenuItem();
+        jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
+        jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
+        jMenuItem3 = new javax.swing.JMenuItem();
+        jMenu4 = new javax.swing.JMenu();
+        jMenuItem6 = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -99,7 +105,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
         jLabel1.setText("Press enter to send.");
 
-        jMenu1.setText("Options");
+        jMenu1.setText("Connection");
 
         jMenuItem1.setText("Reconnect");
         jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
@@ -108,34 +114,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             }
         });
         jMenu1.add(jMenuItem1);
-
-        jMenuItem2.setText("Clear Output");
-        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                onClearOutput(evt);
-            }
-        });
-        jMenu1.add(jMenuItem2);
-
-        jCheckBoxMenuItem2.setSelected(true);
-        jCheckBoxMenuItem2.setText("Word Wrap");
-        jCheckBoxMenuItem2.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                onToggleWordWrap(evt);
-            }
-        });
-        jMenu1.add(jCheckBoxMenuItem2);
-
-        jCheckBoxMenuItem1.setText("Time Stamps");
-        jMenu1.add(jCheckBoxMenuItem1);
-
-        jMenuItem3.setText("Refresh");
-        jMenuItem3.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                OnRefresh(evt);
-            }
-        });
-        jMenu1.add(jMenuItem3);
 
         jMenuItem5.setText("Log Out");
         jMenuItem5.setToolTipText("");
@@ -159,6 +137,51 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jMenu2.add(jMenuItem4);
 
         jMenuBar1.add(jMenu2);
+
+        jMenu3.setText("View");
+
+        jMenuItem2.setText("Clear Output");
+        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onClearOutput(evt);
+            }
+        });
+        jMenu3.add(jMenuItem2);
+
+        jCheckBoxMenuItem1.setText("Time Stamps");
+        jMenu3.add(jCheckBoxMenuItem1);
+
+        jCheckBoxMenuItem2.setSelected(true);
+        jCheckBoxMenuItem2.setText("Word Wrap");
+        jCheckBoxMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onToggleWordWrap(evt);
+            }
+        });
+        jMenu3.add(jCheckBoxMenuItem2);
+
+        jMenuItem3.setText("Refresh");
+        jMenuItem3.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                OnRefresh(evt);
+            }
+        });
+        jMenu3.add(jMenuItem3);
+
+        jMenuBar1.add(jMenu3);
+
+        jMenu4.setText("Options");
+        jMenu4.setToolTipText("");
+
+        jMenuItem6.setText("Help");
+        jMenuItem6.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onHelp(evt);
+            }
+        });
+        jMenu4.add(jMenuItem6);
+
+        jMenuBar1.add(jMenu4);
 
         setJMenuBar(jMenuBar1);
 
@@ -300,6 +323,14 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         cls();
     }//GEN-LAST:event_onLogOut
 
+    private void onHelp(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onHelp
+        try {
+            new HelpGUI().setVisible(true);
+        } catch (URISyntaxException ex) {
+            ConvoSyncClient.LOGGER.log(Level.INFO, null, ex);
+        }
+    }//GEN-LAST:event_onHelp
+
     protected void log(String s) {
         s = Main.format(s);
         if (jCheckBoxMenuItem1.getState()) {
@@ -361,12 +392,15 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JLabel jLabel1;
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu2;
+    private javax.swing.JMenu jMenu3;
+    private javax.swing.JMenu jMenu4;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem jMenuItem1;
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenuItem jMenuItem4;
     private javax.swing.JMenuItem jMenuItem5;
+    private javax.swing.JMenuItem jMenuItem6;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;
