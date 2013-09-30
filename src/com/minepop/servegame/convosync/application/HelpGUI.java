@@ -42,7 +42,7 @@ public class HelpGUI extends javax.swing.JFrame {
         jButton1 = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle("ConvoSyncClient - Help");
+        setTitle("CS-Help");
         setResizable(false);
 
         jButton1.setText("https://github.com/Blir/ConvoSync/wiki");
