@@ -316,6 +316,7 @@ public final class ConvoSyncServer {
         for (Client client : clients) {
             if (client.localname.equals(clientName)) {
                 client.sendMsg(msg, false);
+                return;
             }
         }
     }
@@ -335,6 +336,7 @@ public final class ConvoSyncServer {
         for (Client client : clients) {
             if (client.localname.equals(clientName)) {
                 client.sendMsg(msg, false);
+                return;
             }
         }
     }
@@ -1026,7 +1028,7 @@ public final class ConvoSyncServer {
                         clients.add(client);
                     }
                     new Thread(client).start();
-                    LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
+                    LOGGER.log(Level.FINE, "Accepted a connection: {0}", clientSocket);
                 } catch (IOException ex) {
                     // ignore
                 }

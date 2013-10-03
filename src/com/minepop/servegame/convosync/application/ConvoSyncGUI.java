@@ -9,7 +9,6 @@ import java.awt.Cursor;
 import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -29,6 +28,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         super(client.toString());
         this.client = client;
         initComponents();
+        remove(jMenuItem3);
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
         if (output.getCaret() instanceof javax.swing.text.DefaultCaret) {
