@@ -2,15 +2,9 @@ package com.minepop.servegame.convosync.plugin;
 
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -25,7 +19,6 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
-import static com.minepop.servegame.convosync.Main.format;
 
 /**
  *
@@ -46,7 +39,6 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     private List<ChatListener> listeners = new ArrayList<ChatListener>();
     private List<User> users = new ArrayList<User>();
     private EssentialsTask essTask;
-    private final ConvoSync PLUGIN = this;
     private Map<String, String> lastPM = new HashMap<String, String>();
 
     @Override
@@ -605,7 +597,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                         player.sendMessage(chatMsg.MSG);
                     }
                 }
-                getLogger().info(format(chatMsg.MSG));
+                getLogger().info(Main.format(chatMsg.MSG));
             }
             return;
         }
@@ -619,7 +611,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             }
             getLogger().log(Level.INFO, "Executing remote command {0}", cmd);
             try {
-                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, PLUGIN), cmd.CMD);
+                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, ConvoSync.this), cmd.CMD);
             } catch (CommandException ex) {
                 getLogger().log(Level.SEVERE, null, ex);
             }

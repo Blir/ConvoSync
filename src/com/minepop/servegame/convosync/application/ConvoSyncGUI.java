@@ -28,7 +28,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         super(client.toString());
         this.client = client;
         initComponents();
-        remove(jMenuItem3);
+        remove(refreshMenuItem);
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
         if (output.getCaret() instanceof javax.swing.text.DefaultCaret) {
@@ -54,20 +54,20 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         jScrollPane2 = new javax.swing.JScrollPane();
         userList = new javax.swing.JList<String>();
         input = new javax.swing.JTextField();
-        jLabel1 = new javax.swing.JLabel();
+        infoLabel = new javax.swing.JLabel();
         jMenuBar1 = new javax.swing.JMenuBar();
-        jMenu1 = new javax.swing.JMenu();
-        jMenuItem1 = new javax.swing.JMenuItem();
-        jMenuItem5 = new javax.swing.JMenuItem();
-        jMenu2 = new javax.swing.JMenu();
-        jMenuItem4 = new javax.swing.JMenuItem();
-        jMenu3 = new javax.swing.JMenu();
-        jMenuItem2 = new javax.swing.JMenuItem();
-        jCheckBoxMenuItem1 = new javax.swing.JCheckBoxMenuItem();
-        jCheckBoxMenuItem2 = new javax.swing.JCheckBoxMenuItem();
-        jMenuItem3 = new javax.swing.JMenuItem();
-        jMenu4 = new javax.swing.JMenu();
-        jMenuItem6 = new javax.swing.JMenuItem();
+        connectionMenu = new javax.swing.JMenu();
+        reconnectMenuItem = new javax.swing.JMenuItem();
+        logOutMenuItem = new javax.swing.JMenuItem();
+        accountMenu = new javax.swing.JMenu();
+        changePasswordMenuItem = new javax.swing.JMenuItem();
+        viewMenu = new javax.swing.JMenu();
+        clsMenuItem = new javax.swing.JMenuItem();
+        timeStampsMenuItem = new javax.swing.JCheckBoxMenuItem();
+        wordWrapMenuItem = new javax.swing.JCheckBoxMenuItem();
+        refreshMenuItem = new javax.swing.JMenuItem();
+        optionsMenu = new javax.swing.JMenu();
+        helpMenuItem = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -103,85 +103,85 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             }
         });
 
-        jLabel1.setText("Press enter to send.");
+        infoLabel.setText("Press enter to send.");
 
-        jMenu1.setText("Connection");
+        connectionMenu.setText("Connection");
 
-        jMenuItem1.setText("Reconnect");
-        jMenuItem1.addActionListener(new java.awt.event.ActionListener() {
+        reconnectMenuItem.setText("Reconnect");
+        reconnectMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onReconnect(evt);
             }
         });
-        jMenu1.add(jMenuItem1);
+        connectionMenu.add(reconnectMenuItem);
 
-        jMenuItem5.setText("Log Out");
-        jMenuItem5.setToolTipText("");
-        jMenuItem5.addActionListener(new java.awt.event.ActionListener() {
+        logOutMenuItem.setText("Log Out");
+        logOutMenuItem.setToolTipText("");
+        logOutMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onLogOut(evt);
             }
         });
-        jMenu1.add(jMenuItem5);
+        connectionMenu.add(logOutMenuItem);
 
-        jMenuBar1.add(jMenu1);
+        jMenuBar1.add(connectionMenu);
 
-        jMenu2.setText("Account");
+        accountMenu.setText("Account");
 
-        jMenuItem4.setText("Change Password");
-        jMenuItem4.addActionListener(new java.awt.event.ActionListener() {
+        changePasswordMenuItem.setText("Change Password");
+        changePasswordMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                onPasswordChangeRequest(evt);
+                onNewPasswordRequest(evt);
             }
         });
-        jMenu2.add(jMenuItem4);
+        accountMenu.add(changePasswordMenuItem);
 
-        jMenuBar1.add(jMenu2);
+        jMenuBar1.add(accountMenu);
 
-        jMenu3.setText("View");
+        viewMenu.setText("View");
 
-        jMenuItem2.setText("Clear Output");
-        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+        clsMenuItem.setText("Clear Output");
+        clsMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onClearOutput(evt);
             }
         });
-        jMenu3.add(jMenuItem2);
+        viewMenu.add(clsMenuItem);
 
-        jCheckBoxMenuItem1.setText("Time Stamps");
-        jMenu3.add(jCheckBoxMenuItem1);
+        timeStampsMenuItem.setText("Time Stamps");
+        viewMenu.add(timeStampsMenuItem);
 
-        jCheckBoxMenuItem2.setSelected(true);
-        jCheckBoxMenuItem2.setText("Word Wrap");
-        jCheckBoxMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+        wordWrapMenuItem.setSelected(true);
+        wordWrapMenuItem.setText("Word Wrap");
+        wordWrapMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onToggleWordWrap(evt);
             }
         });
-        jMenu3.add(jCheckBoxMenuItem2);
+        viewMenu.add(wordWrapMenuItem);
 
-        jMenuItem3.setText("Refresh");
-        jMenuItem3.addActionListener(new java.awt.event.ActionListener() {
+        refreshMenuItem.setText("Refresh");
+        refreshMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 OnRefresh(evt);
             }
         });
-        jMenu3.add(jMenuItem3);
+        viewMenu.add(refreshMenuItem);
 
-        jMenuBar1.add(jMenu3);
+        jMenuBar1.add(viewMenu);
 
-        jMenu4.setText("Options");
-        jMenu4.setToolTipText("");
+        optionsMenu.setText("Options");
+        optionsMenu.setToolTipText("");
 
-        jMenuItem6.setText("Help");
-        jMenuItem6.addActionListener(new java.awt.event.ActionListener() {
+        helpMenuItem.setText("Help");
+        helpMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onHelp(evt);
             }
         });
-        jMenu4.add(jMenuItem6);
+        optionsMenu.add(helpMenuItem);
 
-        jMenuBar1.add(jMenu4);
+        jMenuBar1.add(optionsMenu);
 
         setJMenuBar(jMenuBar1);
 
@@ -194,7 +194,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(input)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel1)
+                        .addComponent(infoLabel)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 480, Short.MAX_VALUE))
                 .addContainerGap())
@@ -205,7 +205,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 .addContainerGap()
                 .addComponent(jSplitPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 311, Short.MAX_VALUE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jLabel1)
+                .addComponent(infoLabel)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(input, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap())
@@ -216,7 +216,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
     private void onInput(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onInput
         if (client.pm) {
-            jLabel1.setText("Press enter to send.");
+            infoLabel.setText("Press enter to send.");
             client.pm = false;
             if (client.auth) {
                 if (input.getText().equals("")) {
@@ -254,7 +254,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         if (userList.getSelectedValue() == null || client.pm) {
             return;
         }
-        jLabel1.setText("Press enter to send. [PM: " + userList.getSelectedValue() + "]");
+        infoLabel.setText("Press enter to send. [PM: " + userList.getSelectedValue() + "]");
         client.pm = true;
         input.grabFocus();
     }//GEN-LAST:event_onUserListSelection
@@ -290,16 +290,16 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private void OnRefresh(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OnRefresh
         userList.clearSelection();
         client.pm = false;
-        jLabel1.setText("Press enter to send.");
+        infoLabel.setText("Press enter to send.");
     }//GEN-LAST:event_OnRefresh
 
     private void onToggleWordWrap(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onToggleWordWrap
-        output.setWrapStyleWord(jCheckBoxMenuItem2.getState());
-        output.setLineWrap(jCheckBoxMenuItem2.getState());
+        output.setWrapStyleWord(wordWrapMenuItem.getState());
+        output.setLineWrap(wordWrapMenuItem.getState());
     }//GEN-LAST:event_onToggleWordWrap
 
-    private void onPasswordChangeRequest(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onPasswordChangeRequest
-        new NewPasswordBox("ConvoSyncClient - New Password", "", new NewPasswordListener() {
+    private void onNewPasswordRequest(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onNewPasswordRequest
+        new NewPasswordBox("CS - New Password", "", new NewPasswordListener() {
             @Override
             public void onInput(String input) {
                 client.out(new UserPropertyChange(UserPropertyChange.Property.PASSWORD, input));
@@ -314,12 +314,12 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 new MsgBox("ConvoSyncClient - Warning", "The passwords you entered did not match.", false).setVisible(true);
             }
         }, false).setVisible(true);
-    }//GEN-LAST:event_onPasswordChangeRequest
+    }//GEN-LAST:event_onNewPasswordRequest
 
     private void onLogOut(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogOut
         client.disconnect(true);
         setVisible(false);
-        client.login();
+        client.openLoginGUI();
         cls();
     }//GEN-LAST:event_onLogOut
 
@@ -333,7 +333,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
     protected void log(String s) {
         s = Main.format(s);
-        if (jCheckBoxMenuItem1.getState()) {
+        if (timeStampsMenuItem.getState()) {
             CAL.setTimeInMillis(System.currentTimeMillis());
             StringBuilder sb = new StringBuilder();
             String hour = String.valueOf(CAL.get(Calendar.HOUR_OF_DAY));
@@ -356,6 +356,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         for (int idx = 0; idx < objects.length; idx++) {
             s = s.replace("{" + idx + "}", String.valueOf(objects[idx]));
         }
+        log(s);
     }
 
     protected void logChat(String s) {
@@ -383,28 +384,28 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }
 
     protected boolean useTimeStamps() {
-        return jCheckBoxMenuItem1.getState();
+        return timeStampsMenuItem.getState();
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JMenu accountMenu;
+    private javax.swing.JMenuItem changePasswordMenuItem;
+    private javax.swing.JMenuItem clsMenuItem;
+    private javax.swing.JMenu connectionMenu;
+    private javax.swing.JMenuItem helpMenuItem;
+    private javax.swing.JLabel infoLabel;
     private javax.swing.JTextField input;
-    private javax.swing.JCheckBoxMenuItem jCheckBoxMenuItem1;
-    private javax.swing.JCheckBoxMenuItem jCheckBoxMenuItem2;
-    private javax.swing.JLabel jLabel1;
-    private javax.swing.JMenu jMenu1;
-    private javax.swing.JMenu jMenu2;
-    private javax.swing.JMenu jMenu3;
-    private javax.swing.JMenu jMenu4;
     private javax.swing.JMenuBar jMenuBar1;
-    private javax.swing.JMenuItem jMenuItem1;
-    private javax.swing.JMenuItem jMenuItem2;
-    private javax.swing.JMenuItem jMenuItem3;
-    private javax.swing.JMenuItem jMenuItem4;
-    private javax.swing.JMenuItem jMenuItem5;
-    private javax.swing.JMenuItem jMenuItem6;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;
+    private javax.swing.JMenuItem logOutMenuItem;
+    private javax.swing.JMenu optionsMenu;
     private javax.swing.JTextArea output;
+    private javax.swing.JMenuItem reconnectMenuItem;
+    private javax.swing.JMenuItem refreshMenuItem;
+    private javax.swing.JCheckBoxMenuItem timeStampsMenuItem;
     private javax.swing.JList<String> userList;
+    private javax.swing.JMenu viewMenu;
+    private javax.swing.JCheckBoxMenuItem wordWrapMenuItem;
     // End of variables declaration//GEN-END:variables
 }
