@@ -60,8 +60,8 @@ public final class ConvoSyncServer {
         consoleHandler.setFormatter(formatter);
         consoleHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(consoleHandler);
-        File log = new File("CS-Server.log");
-        for (int idx = 0; log.length() > 5242880; idx++) {
+        File log = new File("CS-Server0.log");
+        for (int idx = 1; log.length() > 5242880; idx++) {
             log = new File("CS-Server" + idx + ".log");
         }
         fileHandler = new FileHandler(log.getName(), true);
@@ -128,12 +128,11 @@ public final class ConvoSyncServer {
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, "Error loading ban list.", ex);
         }
-        Properties p = null;
         try {
-            p = new Properties();
+            Properties p = new Properties();
             FileInputStream fis = null;
             try {
-                fis = new FileInputStream(new File("CS-Server.properties"));
+                fis = new FileInputStream(new File("config.properties"));
                 p.load(fis);
             } finally {
                 if (fis != null) {
@@ -141,8 +140,10 @@ public final class ConvoSyncServer {
                 }
             }
             String prop = p.getProperty("chat-color");
-            chatColor = prop == null ? '\u0000' : prop.charAt(0);
-            LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
+            chatColor = prop.length() < 1 ? '\u0000' : prop.charAt(0);
+            if (chatColor != '\u0000') {
+                LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
+            }
             prop = p.getProperty("use-prefixes");
             prefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
@@ -167,23 +168,37 @@ public final class ConvoSyncServer {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             }
         }
-        if (p != null) {
-            String prop = p.getProperty("port");
+        try {
+            FileInputStream fis = null;
             try {
-                port = Integer.parseInt(prop);
-            } catch (NumberFormatException ex) {
+                fis = new FileInputStream(new File("connection.properties"));
+                Properties p = new Properties();
+                p.load(fis);
+                String prop = p.getProperty("port");
+                try {
+                    port = Integer.parseInt(prop);
+                } catch (NumberFormatException ex) {
+                    if (prop != null) {
+                        LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                    }
+                }
+                prop = p.getProperty("name");
                 if (prop != null) {
-                    LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                    name = prop;
+                }
+                prop = p.getProperty("plugin-password");
+                if (prop != null) {
+                    pluginPassword = prop;
+                }
+            } finally {
+                if (fis != null) {
+                    fis.close();
                 }
             }
-            prop = p.getProperty("name");
-            if (prop != null) {
-                name = prop;
-            }
-            prop = p.getProperty("plugin-password");
-            if (prop != null) {
-                pluginPassword = prop;
-            }
+        } catch (FileNotFoundException ex) {
+            // ignore
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "Couldn't load connection config: ", ex);
         }
         while (port == 0) {
             System.out.print("Enter port: ");
@@ -248,15 +263,16 @@ public final class ConvoSyncServer {
 
     private synchronized void out(String msg, Client sender) {
         if (sender != null && !sender.auth) {
+            //LOGGER.log(Level.FINEST, "Sender auth: {0}", sender.auth);
             return;
         }
+        //LOGGER.log(Level.FINEST, "Sender auth: {0}", sender == null ? "NA" : sender.auth);
+        ChatMessage chatMsg = new ChatMessage(msg, false);
         for (Client client : clients) {
+            //LOGGER.log(Level.FINEST, "Client: {0} Client != sender: {1} Client auth: {2} Client enabled: {3} Client alive: {4}",
+                    //new Object[]{(client == null ? "NA" : client.localname), (client != sender), (client == null? "NA" : client.auth), (client == null ? "NA" : client.enabled), (client == null ? "NA" : client.alive)});
             if (client != sender && client.auth) {
-                if (sender == null && client.enabled) {
-                    client.sendMsg(new ChatMessage(msg, true), false);
-                } else {
-                    client.sendMsg(msg, false);
-                }
+                client.sendMsg(chatMsg, false);
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
@@ -279,8 +295,8 @@ public final class ConvoSyncServer {
     }
 
     private synchronized void sendPlayerListUpdate() {
-        String[] list = userMap.keySet().toArray(new String[userMap.size()]);
-        PlayerListUpdate update = new PlayerListUpdate(list);
+        PlayerListUpdate update;
+        update = new PlayerListUpdate(userMap.keySet().toArray(new String[userMap.size()]));
         for (Client client : clients) {
             if (client.type == ClientType.APPLICATION && client.auth) {
                 client.sendMsg(update, false);
@@ -379,15 +395,14 @@ public final class ConvoSyncServer {
 
     private class Client implements Runnable {
 
-        private Socket socket;
-        private ClientType type;
-        private ObjectOutputStream out;
-        private ObjectInputStream in;
-        private boolean alive = true, auth = false, enabled = true;
-        private String name, localname, version;
+        Socket socket;
+        ClientType type;
+        ObjectOutputStream out;
+        ObjectInputStream in;
+        boolean alive = true, auth = false, enabled = true;
+        String name, localname, version;
 
-        private Client(Socket socket) throws IOException {
-            super();
+        Client(Socket socket) throws IOException {
             this.socket = socket;
             out = new ObjectOutputStream(socket.getOutputStream());
             in = new ObjectInputStream(socket.getInputStream());
@@ -424,7 +439,7 @@ public final class ConvoSyncServer {
             }
         }
 
-        private synchronized void processMessage(Message msg) throws IOException {
+        synchronized void processMessage(Message msg) throws IOException {
             if (msg instanceof PrivateMessage) {
                 out((PrivateMessage) msg, this);
                 return;
@@ -470,9 +485,8 @@ public final class ConvoSyncServer {
                                     element), this);
                             Client client = getClient(element);
                             if (client == null) {
-                                LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                        + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
-                                        element);
+                                LOGGER.log(Level.WARNING, "{0} is already logged on {1}.",
+                                        new Object[]{element, userMap.get(element)});
                             } else {
                                 client.close(true, true, DisconnectMessage.Reason.KICKED);
                                 clients.remove(client);
@@ -507,9 +521,8 @@ public final class ConvoSyncServer {
                     if (userMap.get(element) != null) {
                         Client client = getClient(element);
                         if (client == null) {
-                            LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                    + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
-                                    element);
+                            LOGGER.log(Level.WARNING, "{0} is already logged on {1}.",
+                                    new Object[]{element, userMap.get(element)});
                         } else {
                             out(new PlayerMessage(
                                     "You cannot be logged into the client and the game simultaneously.",
@@ -529,7 +542,8 @@ public final class ConvoSyncServer {
                 ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) msg;
                 version = authReq.VERSION;
                 if (!Main.VERSION.equals(version)) {
-                    LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, authReq.NAME, version});
+                    LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}",
+                            new Object[]{Main.VERSION, authReq.NAME, version});
                 }
                 User user = getUser(authReq.NAME);
                 if (user == null) {
@@ -552,9 +566,6 @@ public final class ConvoSyncServer {
                 sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
                 if (auth) {
                     localname = (name = authReq.NAME);
-                    sendMsg(new PlayerListUpdate(
-                            userMap.keySet().toArray(
-                            new String[userMap.keySet().size()])), false);
                     out(name + " has joined.", this);
                     userMap.put(name, "CS-Client");
                     sendPlayerListUpdate();
@@ -613,6 +624,7 @@ public final class ConvoSyncServer {
                     completelyClose(false, null);
                 } catch (ConcurrentModificationException ex) {
                     LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
+                    alive = false;
                 }
                 try {
                     out(name + " has disconnected.", this);
@@ -622,19 +634,13 @@ public final class ConvoSyncServer {
             }
         }
 
-        private void sendMsg(String s, boolean override) {
-            if (enabled || override) {
-                sendMsg(new ChatMessage(s, false));
-            }
-        }
-
-        private void sendMsg(Object obj, boolean override) {
+        void sendMsg(Object obj, boolean override) {
             if (enabled || override) {
                 sendMsg(obj);
             }
         }
 
-        private void sendMsg(Object obj) {
+        void sendMsg(Object obj) {
             if (!alive) {
                 LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", localname);
                 return;
@@ -646,11 +652,16 @@ public final class ConvoSyncServer {
             } catch (IOException ex) {
                 if (!socket.isClosed()) {
                     LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, localname, ex.toString()});
+                    try {
+                        close(false, false, null);
+                    } catch (IOException ex2) {
+                        LOGGER.log(Level.SEVERE, "Error closing {0} : {1}", new Object[]{localname, ex2.toString()});
+                    }
                 }
             }
         }
 
-        private void close(boolean kick, boolean msg, DisconnectMessage.Reason reason) throws IOException {
+        void close(boolean kick, boolean msg, DisconnectMessage.Reason reason) throws IOException {
             if (msg) {
                 sendMsg(new DisconnectMessage(reason), true);
             }
@@ -667,14 +678,14 @@ public final class ConvoSyncServer {
             sendPlayerListUpdate();
         }
 
-        private synchronized void completelyClose(boolean msg, DisconnectMessage.Reason reason) throws IOException {
+        synchronized void completelyClose(boolean msg, DisconnectMessage.Reason reason) throws IOException {
             clients.remove(this);
             close(false, msg, reason);
         }
 
         @Override
         public String toString() {
-            return "Client[" + localname + "," + version + "," + socket + "]";
+            return "Client[" + localname + "," + version + "," + (alive ? "ALIVE" : "NOT_ALIVE") + "," + socket + "]";
         }
     }
 
@@ -735,8 +746,8 @@ public final class ConvoSyncServer {
                 }
                 try {
                     Properties p = new Properties();
-                    FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
-                    p.setProperty("chat-color", String.valueOf(chatColor));
+                    FileOutputStream fos = new FileOutputStream(new File("config.properties"));
+                    p.setProperty("chat-color", chatColor == '\u0000' ? "" : String.valueOf(chatColor));
                     p.setProperty("use-prefixes", String.valueOf(prefix));
                     p.store(fos, null);
                     fos.close();
@@ -746,7 +757,7 @@ public final class ConvoSyncServer {
                 try {
                     close(args != null && args.length > 0
                             && args[0].equalsIgnoreCase("force"),
-                            DisconnectMessage.Reason.RESTARTING);
+                            DisconnectMessage.Reason.CLOSING);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
@@ -932,7 +943,7 @@ public final class ConvoSyncServer {
                 FileOutputStream fos = null;
                 try {
                     try {
-                        fos = new FileOutputStream("CS-Server.properties");
+                        fos = new FileOutputStream("connection.properties");
                         p.store(fos, null);
                         LOGGER.log(Level.INFO, "Config generated.");
                     } finally {
@@ -1030,7 +1041,7 @@ public final class ConvoSyncServer {
                     new Thread(client).start();
                     LOGGER.log(Level.FINE, "Accepted a connection: {0}", clientSocket);
                 } catch (IOException ex) {
-                    // ignore
+                    LOGGER.log(Level.FINEST, "Error accepting a connection: {0}", ex.toString());
                 }
             }
         }

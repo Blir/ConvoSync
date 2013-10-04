@@ -12,7 +12,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.5-dev1.1";
+    public static final String VERSION = "1.0.5-dev2.0";
 
     public static void main(final String[] args) throws IOException {
         try {
