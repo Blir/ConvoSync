@@ -65,7 +65,8 @@ public class RemoteCommandSender implements CommandSender {
     }
 
     @Override
-    public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln) {
+    public PermissionAttachment addAttachment(Plugin plugin, String string,
+                                              boolean bln) {
         throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
@@ -75,7 +76,8 @@ public class RemoteCommandSender implements CommandSender {
     }
 
     @Override
-    public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln, int i) {
+    public PermissionAttachment addAttachment(Plugin plugin, String string,
+                                              boolean bln, int i) {
         throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 

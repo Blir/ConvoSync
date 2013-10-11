@@ -19,11 +19,12 @@ import java.util.logging.Logger;
 public class HelpGUI extends javax.swing.JFrame {
 
     private final URI help;
-    
+
     /**
      * Creates new form HelpGUI
      */
-    protected HelpGUI() throws URISyntaxException {
+    protected HelpGUI()
+            throws URISyntaxException {
         help = new URI("https://github.com/Blir/ConvoSync/wiki");
         initComponents();
         jButton1.setText(help.toASCIIString());
@@ -83,7 +84,6 @@ public class HelpGUI extends javax.swing.JFrame {
             new MsgBox("ConvoSyncClient - Error", "Your desktop is not supported.", false).setVisible(true);
         }
     }//GEN-LAST:event_onButtonPressed
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     // End of variables declaration//GEN-END:variables

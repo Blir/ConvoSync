@@ -28,8 +28,10 @@ public class EssentialsListener implements Listener {
 
     @EventHandler
     public void onPlayerCommandPreprocessEvent(PlayerCommandPreprocessEvent evt) {
-        if (plugin.isEss && !evt.isCancelled() && (evt.getMessage().equalsIgnoreCase("/vanish") || evt.getMessage().equalsIgnoreCase("/v"))) {
-            plugin.out(new PlayerVanishMessage(evt.getPlayer().getName(), !ess.getUser(evt.getPlayer()).isVanished()), false);
+        if (plugin.isEss && !evt.isCancelled() && (evt.getMessage().equalsIgnoreCase("/vanish")
+                                                   || evt.getMessage().equalsIgnoreCase("/v"))) {
+            plugin.out(new PlayerVanishMessage(evt.getPlayer().getName(),
+                                               !ess.getUser(evt.getPlayer()).isVanished()), false);
         }
     }
 }

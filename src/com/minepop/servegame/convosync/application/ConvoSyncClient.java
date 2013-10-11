@@ -33,7 +33,8 @@ public final class ConvoSyncClient {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args)
+            throws IOException {
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {
@@ -46,7 +47,8 @@ public final class ConvoSyncClient {
         new ConvoSyncClient().run(args);
     }
 
-    public ConvoSyncClient() throws IOException {
+    public ConvoSyncClient()
+            throws IOException {
         Handler handler = new ConsoleHandler();
         Formatter formatter = new CompactFormatter() {
             @Override
@@ -117,7 +119,7 @@ public final class ConvoSyncClient {
         }
         openLoginGUI();
     }
-    
+
     protected void openLoginGUI() {
         login = new LoginGUI(this, ip, port, name, password, remember);
         login.setVisible(true);
@@ -128,7 +130,8 @@ public final class ConvoSyncClient {
         return connect();
     }
 
-    protected String connect(String ip, int port, String password, boolean remember) {
+    protected String connect(String ip, int port, String password,
+                             boolean remember) {
         this.ip = ip;
         this.port = port;
         this.password = password;
@@ -156,7 +159,8 @@ public final class ConvoSyncClient {
     private String connect() {
         try {
             gui.clearUserList();
-            LOGGER.log(Level.INFO, "Connecting to {0}:{1}...", new Object[]{ip, port});
+            LOGGER.log(Level.INFO, "Connecting to {0}:{1}...",
+                       new Object[]{ip, port});
             socket = new Socket();
             socket.connect(new InetSocketAddress(ip, port), timeout);
             in = new ObjectInputStream(socket.getInputStream());
@@ -238,7 +242,8 @@ public final class ConvoSyncClient {
         if (msg instanceof PrivateMessage) {
             PrivateMessage pmsg = (PrivateMessage) msg;
             gui.log("[[" + pmsg.SERVER + "] " + pmsg.SENDER + "] -> me] " + pmsg.MSG);
-            out(new PlayerMessage(Main.COLOR_CHAR + "6[me -> [CS-Client]" + name + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
+            out(new PlayerMessage(Main.COLOR_CHAR + "6[me -> [CS-Client]" + name
+                                  + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
             return;
         }
         if (msg instanceof PlayerMessage) {

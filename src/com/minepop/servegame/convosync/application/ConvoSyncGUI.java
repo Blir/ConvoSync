@@ -32,7 +32,8 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
         if (output.getCaret() instanceof javax.swing.text.DefaultCaret) {
-            ((javax.swing.text.DefaultCaret) output.getCaret()).setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
+            ((javax.swing.text.DefaultCaret) output.getCaret())
+                    .setUpdatePolicy(javax.swing.text.DefaultCaret.ALWAYS_UPDATE);
         }
         CAL = Calendar.getInstance();
         onToggleWordWrap(null);
@@ -223,7 +224,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                     return;
                 }
                 client.out(new PrivateMessage(userList.getSelectedValue(),
-                        client.name, input.getText(), "CS-Client"));
+                                              client.name, input.getText(), "CS-Client"));
             }
             userList.clearSelection();
         } else if (client.auth) {

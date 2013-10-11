@@ -39,7 +39,8 @@ public class EssentialsTask implements Runnable {
                 if (user.isAfk() != csuser.afk) {
                     csuser.afk = user.isAfk();
                     if (!user.isVanished()) {
-                        plugin.out(user.getDisplayName() + ChatColor.DARK_PURPLE + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
+                        plugin.out(user.getDisplayName() + ChatColor.DARK_PURPLE
+                                   + " is no" + (user.isAfk() ? "w AFK." : " longer AFK."), false);
                     }
                 }
             }

@@ -12,9 +12,10 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.5-dev2.0";
+    public static final String VERSION = "1.0.5-dev3.0";
 
-    public static void main(final String[] args) throws IOException {
+    public static void main(final String[] args)
+            throws IOException {
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {
