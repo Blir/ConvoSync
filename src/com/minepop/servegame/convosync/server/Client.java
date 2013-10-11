@@ -300,9 +300,6 @@ public final class Client implements Runnable {
             server.userMap.remove(name);
         }
         messenger.sendPlayerListUpdate();
-        socket = null;
-        in = null;
-        out = null;
     }
 
     protected void completelyClose(boolean msg, DisconnectMessage.Reason reason)
