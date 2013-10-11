@@ -340,13 +340,16 @@ public final class ConvoSyncServer {
                 try {
                     close(args != null && args.length > 0
                           && args[0].equalsIgnoreCase("force"),
-                          DisconnectMessage.Reason.CLOSING);
+                          args != null && args.length > 0
+                          && args[0].equals("restart")
+                          ? DisconnectMessage.Reason.RESTARTING
+                          : DisconnectMessage.Reason.CLOSING);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
                 }
                 break;
             case RESTART:
-                dispatchCommand(Command.EXIT, null);
+                dispatchCommand(Command.EXIT, new String[]{"restart"});
                 try {
                     ConvoSyncServer server = new ConvoSyncServer();
                     server.debug = debug;

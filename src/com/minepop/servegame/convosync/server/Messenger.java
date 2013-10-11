@@ -163,7 +163,6 @@ public final class Messenger {
     }
 
     private void close(DisconnectMessage dmsg) {
-        LOGGER.log(Level.FINEST, "Sending disconnect messages...");
         for (Client client : server.clients) {
             try {
                 client.close(false, true, dmsg);
@@ -171,6 +170,5 @@ public final class Messenger {
                 // ignore
             }
         }
-        LOGGER.log(Level.FINEST, "...done.");
     }
 }

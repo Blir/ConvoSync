@@ -7,7 +7,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Collections;
-import java.util.ConcurrentModificationException;
 import java.util.logging.Level;
 
 import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
@@ -147,7 +146,9 @@ public final class Client implements Runnable {
             }
             auth = authReq.PASSWORD.equals(server.pluginPassword);
             sendMsg(new AuthenticationRequestResponse(auth,
-                                                      AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
+                                                      auth
+                                                      ? null
+                                                      : AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
                                                       Main.VERSION), true);
             for (String element : authReq.PLAYERS) {
                 if (server.userMap.get(element) != null) {
