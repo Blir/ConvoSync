@@ -348,7 +348,9 @@ public final class ConvoSyncServer {
             case RESTART:
                 dispatchCommand(Command.EXIT, null);
                 try {
-                    new ConvoSyncServer().run(args.length == 0 ? startupArgs : args);
+                    ConvoSyncServer server = new ConvoSyncServer();
+                    server.debug = debug;
+                    server.run(args.length == 0 ? startupArgs : args);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error restarting server!", ex);
                 }

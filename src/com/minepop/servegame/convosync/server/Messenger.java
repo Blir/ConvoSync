@@ -32,6 +32,7 @@ public final class Messenger {
             return;
         }
 
+        LOGGER.log(Level.FINE, "Adding {0}", newClients);
         server.clients.addAll(newClients);
         newClients.clear();
 
@@ -51,6 +52,7 @@ public final class Messenger {
             close((DisconnectMessage) o);
         }
 
+        LOGGER.log(Level.FINE, "Removing {0}", deadClients);
         server.clients.removeAll(deadClients);
         deadClients.clear();
     }
