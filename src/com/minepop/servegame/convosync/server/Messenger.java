@@ -32,9 +32,11 @@ public final class Messenger {
             return;
         }
 
-        LOGGER.log(Level.FINE, "Adding {0}", newClients);
-        server.clients.addAll(newClients);
-        newClients.clear();
+        if (!newClients.isEmpty()) {
+            LOGGER.log(Level.FINE, "Adding {0}", clientListToString(newClients));
+            server.clients.addAll(newClients);
+            newClients.clear();
+        }
 
         if (o instanceof String) {
             out(new ChatMessage((String) o, false), sender);
@@ -52,9 +54,22 @@ public final class Messenger {
             close((DisconnectMessage) o);
         }
 
-        LOGGER.log(Level.FINE, "Removing {0}", deadClients);
-        server.clients.removeAll(deadClients);
-        deadClients.clear();
+        if (!deadClients.isEmpty()) {
+            LOGGER.log(Level.FINE, "Removing {0}", clientListToString(deadClients));
+            server.clients.removeAll(deadClients);
+            deadClients.clear();
+        }
+    }
+    
+    private static String clientListToString(List<Client> clients) {
+        StringBuilder sb = new StringBuilder();
+        for (int idx = 0; idx < clients.size(); idx++) {
+            if (idx != 0) {
+                sb.append(",");
+            }
+            sb.append(clients.get(idx).localname);
+        }
+        return sb.toString();
     }
 
     private void out(ChatMessage msg, Client sender) {
@@ -148,6 +163,7 @@ public final class Messenger {
     }
 
     private void close(DisconnectMessage dmsg) {
+        LOGGER.log(Level.FINEST, "Sending disconnect messages...");
         for (Client client : server.clients) {
             try {
                 client.close(false, true, dmsg);
@@ -155,5 +171,6 @@ public final class Messenger {
                 // ignore
             }
         }
+        LOGGER.log(Level.FINEST, "...done.");
     }
 }
