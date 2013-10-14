@@ -30,7 +30,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
 
         SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS, VERSION
     }
-    private int port, players, max = 25;
+    private int port, players, maxPlayers = 25;
     private String ip, password;
     private ObjectInputStream in;
     private ObjectOutputStream out;
@@ -52,7 +52,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             port = getConfig().getInt("port");
             ip = getConfig().getString("ip");
             password = getConfig().getString("password");
-            max = getConfig().getInt("max-players");
+            maxPlayers = getConfig().getInt("max-players");
         } catch (NumberFormatException ex) {
             getLogger().warning("Improper config.");
         } catch (NullPointerException ex) {
@@ -77,7 +77,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             getServer().getPluginManager().registerEvents(new EssentialsListener(this), this);
         }
         players = getServer().getOnlinePlayers().length;
-        if (players > max) {
+        if (players > maxPlayers) {
             getServer().broadcastMessage(ChatColor.RED
                                          + "Cross-server chat is disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
@@ -96,7 +96,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         getConfig().set("ip", ip);
         getConfig().set("port", port);
         getConfig().set("password", password);
-        getConfig().set("max-players", max);
+        getConfig().set("max-players", maxPlayers);
         getConfig().set("allow-cross-server-commands",
                         getConfig().getBoolean("allow-cross-server-commands"));
         getConfig().set("notif.player-death",
@@ -160,7 +160,6 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                 case RECONNECT:
                     if (connected) {
                         try {
-                            shouldBe = false;
                             disconnect();
                         } catch (IOException ex) {
                             getLogger().log(Level.WARNING,
@@ -178,7 +177,6 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                     return true;
                 case DISCONNECT:
                     try {
-                        shouldBe = false;
                         disconnect();
                     } catch (IOException ex) {
                         getLogger().log(Level.WARNING,
@@ -196,7 +194,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                         return true;
                     }
                     try {
-                        max = Integer.parseInt(args[1]);
+                        maxPlayers = Integer.parseInt(args[1]);
                     } catch (NumberFormatException ex) {
                         sender.sendMessage(ChatColor.RED
                                            + "You did not enter a valid number.");
@@ -204,10 +202,21 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                     }
                     sender.sendMessage(ChatColor.GREEN
                                        + "Now using max player count of " + ChatColor.BLUE
-                                       + max + ChatColor.GREEN + ".");
+                                       + maxPlayers + ChatColor.GREEN + ".");
                     return true;
                 case USERS:
-                    out(new UserListRequest(sender.getName()), false);
+                    if (connected) {
+                        if (auth) {
+                            out(new UserListRequest(sender.getName()), false);
+                            sender.sendMessage(ChatColor.GREEN + "User list request sent.");
+                        } else {
+                            sender.sendMessage(ChatColor.RED
+                                               + "Cannot send message : Connection is not authenticated.");
+                        }
+                    } else {
+                        sender.sendMessage(ChatColor.RED
+                                           + "Cannot send message : Disconnected from server.");
+                    }
                     return true;
                 case VERSION:
                     sender.sendMessage(ChatColor.GREEN + "v" + Main.VERSION);
@@ -221,7 +230,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             String msg = sb.toString().substring(1);
             if (connected) {
                 if (auth) {
-                    if (players < max) {
+                    if (players < maxPlayers) {
                         out(msg, false);
                     } else {
                         sender.sendMessage(ChatColor.RED
@@ -376,7 +385,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerJoin(PlayerJoinEvent evt) {
         players++;
-        if (players == max) {
+        if (players == maxPlayers) {
             getServer().broadcastMessage(ChatColor.RED
                                          + "Cross-server chat is now disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
@@ -406,7 +415,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerQuit(PlayerQuitEvent evt) {
         players--;
-        if (players == max - 1) {
+        if (players == maxPlayers - 1) {
             getServer().broadcastMessage(ChatColor.RED
                                          + "Cross-server chat is now enabled due to reduced player count.");
             out(new SetEnabledProperty(true), false);
@@ -466,7 +475,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     }
 
     private void autoReconnect(int pausetime) {
-        if (!shouldBe && !isEnabled()) {
+        if (!shouldBe || !isEnabled()) {
             return;
         }
         getLogger().log(Level.INFO, "Attempting to reconnect every {0} seconds...",
@@ -683,22 +692,18 @@ public final class ConvoSync extends JavaPlugin implements Listener {
 
                 } catch (IOException ex) {
                     connected = false;
-                    getLogger().log(Level.WARNING, "Error reading from socket: {0}", ex.toString());
+                    if (!socket.isClosed()) {
+                        getLogger().log(Level.WARNING, "Error reading from socket: {0}", ex.toString());
+                    }
                     if (socket.isClosed() && getConfig().getBoolean("auto-reconnect.after-socket-close")) {
                         autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
                     } else {
-                        try {
-                            disconnect();
-                        } catch (IOException ex2) {
-                            getLogger().log(Level.WARNING, "Error closing socket: {0}", ex2.toString());
-                        }
                         if (getConfig().getBoolean("auto-reconnect.after-socker-error")) {
                             autoReconnect(getConfig().getInt("auto-reconnect.time-delay-ms"));
                         }
                     }
                 } catch (ClassNotFoundException ex) {
-                    getLogger().log(Level.SEVERE, "Fatal error.", ex);
-                    connected = false;
+                    getLogger().log(Level.SEVERE, null, ex);
                 }
             }
         }

@@ -36,8 +36,8 @@ public final class Client implements Runnable {
     protected Client(Socket socket, ConvoSyncServer server, Messenger messenger)
             throws IOException {
         this.socket = socket;
-        out = new ObjectOutputStream(socket.getOutputStream());
-        in = new ObjectInputStream(socket.getInputStream());
+        this.out = new ObjectOutputStream(socket.getOutputStream());
+        this.in = new ObjectInputStream(socket.getInputStream());
         this.server = server;
         this.messenger = messenger;
     }
@@ -55,24 +55,28 @@ public final class Client implements Runnable {
                     LOGGER.log(Level.WARNING,
                                "Closing {0}; unexpected input: {1}",
                                new Object[]{localname, input});
-                    close(true, true, new DisconnectMessage(DisconnectMessage.Reason.KICKED));
+                    close1(true, true, new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                 }
             } catch (IOException ex) {
                 LOGGER.log(Level.FINE, "Couldn't read from socket in {0}: {1}",
                            new Object[]{localname, ex});
                 if (!socket.isClosed()) {
+                    boolean crash = !messenger.deadClients.contains(this);
                     try {
-                        completelyClose(false, DisconnectMessage.Reason.CRASHED);
+                        close2(false, false, DisconnectMessage.Reason.CRASHED);
                     } catch (IOException ex2) {
                         LOGGER.log(Level.FINE, "Couldn't close {0}: {1}",
                                    new Object[]{localname, ex2});
+                    }
+                    if (crash) {
+                        messenger.out(COLOR_CHAR + "c" + localname + " has crashed or improperly disconnected.", null);
                     }
                 }
             } catch (ClassNotFoundException ex) {
                 LOGGER.log(Level.WARNING, "Closing {0}: {1}",
                            new Object[]{localname, ex});
                 try {
-                    completelyClose(false, DisconnectMessage.Reason.CRASHED);
+                    close2(false, false, DisconnectMessage.Reason.CRASHED);
                 } catch (IOException ex2) {
                     LOGGER.log(Level.FINE, "Couldn't close {0}: {1}",
                                new Object[]{localname, ex2});
@@ -86,10 +90,14 @@ public final class Client implements Runnable {
         if (msg instanceof PrivateMessage || msg instanceof PlayerMessage) {
             messenger.out(msg, this);
         } else if (msg instanceof ChatMessage) {
-            if (server.prefix || type == ClientType.APPLICATION) {
-                messenger.out("[" + COLOR_CHAR + server.chatColor
-                              + name + COLOR_CHAR + "f] " + ((ChatMessage) msg).MSG,
-                              this);
+            if (server.usePrefix || type == ClientType.APPLICATION) {
+                if (server.chatColor == '\u0000') {
+                    messenger.out("[" + name + "] " + ((ChatMessage) msg).MSG, this);
+                } else {
+                    messenger.out("[" + COLOR_CHAR + server.chatColor
+                                  + name + COLOR_CHAR + "f] " + ((ChatMessage) msg).MSG,
+                                  this);
+                }
             } else {
                 messenger.out((ChatMessage) msg, this);
             }
@@ -120,8 +128,8 @@ public final class Client implements Runnable {
                             messenger.out(new PlayerMessage(
                                     "You cannot be logged into the client and the game simultaneously.",
                                     element), this);
-                            client.close(true, true,
-                                         new DisconnectMessage(DisconnectMessage.Reason.KICKED));
+                            client.close1(true, true,
+                                          new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                             messenger.deadClients.add(client);
                         }
                     }
@@ -162,8 +170,8 @@ public final class Client implements Runnable {
                         messenger.out(new PlayerMessage(
                                 "You cannot be logged into the client and the game simultaneously.",
                                 element), this);
-                        client.close(true, true,
-                                     new DisconnectMessage(DisconnectMessage.Reason.KICKED));
+                        client.close1(true, true,
+                                      new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                     }
                 }
                 server.userMap.put(element, localname);
@@ -250,7 +258,7 @@ public final class Client implements Runnable {
                         user), sender), false);
             }
         } else if (msg instanceof DisconnectMessage) {
-            completelyClose(false, null);
+            close2(false, false, null);
             messenger.out(name + " has disconnected.", this);
         }
     }
@@ -269,24 +277,29 @@ public final class Client implements Runnable {
         try {
             out.writeObject(msg);
             out.flush();
-            LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{msg,
-                                                                     localname});
+            LOGGER.log(Level.FINER, "{0} sent to {1}!",
+                       new Object[]{msg, localname});
         } catch (IOException ex) {
             if (!socket.isClosed()) {
                 LOGGER.log(Level.SEVERE, "Could not write {0} to client {1}: {2}",
                            new Object[]{msg, localname, ex});
+                boolean crash = !messenger.deadClients.contains(this);
                 try {
-                    close(false, false, null);
+                    close1(false, false, null);
                 } catch (IOException ex2) {
                     LOGGER.log(Level.FINE, "Couldn't close {0}: {1}",
                                new Object[]{localname, ex2});
+                }
+                if (crash) {
+                    messenger.out(COLOR_CHAR + "c" + localname + " has crashed or improperly disconnected.", null);
                 }
             }
         }
     }
 
-    protected void close(boolean kick, boolean msg, DisconnectMessage dmsg)
+    protected void close1(boolean kick, boolean msg, DisconnectMessage dmsg)
             throws IOException {
+        messenger.deadClients.add(this);
         if (msg) {
             sendMsg(dmsg, true);
         }
@@ -303,15 +316,15 @@ public final class Client implements Runnable {
         messenger.sendPlayerListUpdate();
     }
 
-    protected void completelyClose(boolean msg, DisconnectMessage.Reason reason)
+    protected void close2(boolean kick, boolean msg,
+                          DisconnectMessage.Reason reason)
             throws IOException {
-        messenger.deadClients.add(this);
-        close(false, msg, new DisconnectMessage(reason));
+        close1(kick, msg, new DisconnectMessage(reason));
     }
 
     @Override
     public String toString() {
         return "Client[" + localname + "," + version + ","
-               + (alive ? "ALIVE" : "NOT_ALIVE") + "," + socket + "]";
+               + (alive ? "ALIVE" : "DEAD") + "," + socket + "]";
     }
 }

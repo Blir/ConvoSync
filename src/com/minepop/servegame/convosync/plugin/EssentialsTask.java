@@ -32,7 +32,7 @@ public class EssentialsTask implements Runnable {
         if (plugin.isEss) {
             plugin.getLogger().info("Essentials Task started!");
         }
-        while (plugin.connected && plugin.isEss) {
+        while (plugin.connected && plugin.isEss && plugin.isEnabled()) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
                 com.earth2me.essentials.User user = ess.getUser(player);
                 User csuser = getUser(user);

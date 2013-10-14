@@ -28,7 +28,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         super(client.toString());
         this.client = client;
         initComponents();
-        remove(refreshMenuItem);
         model = new javax.swing.DefaultListModel<String>();
         userList.setModel(model);
         if (output.getCaret() instanceof javax.swing.text.DefaultCaret) {
@@ -66,7 +65,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         clsMenuItem = new javax.swing.JMenuItem();
         timeStampsMenuItem = new javax.swing.JCheckBoxMenuItem();
         wordWrapMenuItem = new javax.swing.JCheckBoxMenuItem();
-        refreshMenuItem = new javax.swing.JMenuItem();
         optionsMenu = new javax.swing.JMenu();
         helpMenuItem = new javax.swing.JMenuItem();
 
@@ -160,14 +158,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
             }
         });
         viewMenu.add(wordWrapMenuItem);
-
-        refreshMenuItem.setText("Refresh");
-        refreshMenuItem.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                OnRefresh(evt);
-            }
-        });
-        viewMenu.add(refreshMenuItem);
 
         jMenuBar1.add(viewMenu);
 
@@ -288,12 +278,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         output.setText("");
     }//GEN-LAST:event_onClearOutput
 
-    private void OnRefresh(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_OnRefresh
-        userList.clearSelection();
-        client.pm = false;
-        infoLabel.setText("Press enter to send.");
-    }//GEN-LAST:event_OnRefresh
-
     private void onToggleWordWrap(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onToggleWordWrap
         output.setWrapStyleWord(wordWrapMenuItem.getState());
         output.setLineWrap(wordWrapMenuItem.getState());
@@ -403,7 +387,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JMenu optionsMenu;
     private javax.swing.JTextArea output;
     private javax.swing.JMenuItem reconnectMenuItem;
-    private javax.swing.JMenuItem refreshMenuItem;
     private javax.swing.JCheckBoxMenuItem timeStampsMenuItem;
     private javax.swing.JList<String> userList;
     private javax.swing.JMenu viewMenu;

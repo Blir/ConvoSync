@@ -3,10 +3,7 @@ package com.minepop.servegame.convosync.server;
 import com.minepop.servegame.convosync.net.*;
 import com.minepop.servegame.convosync.server.Client.ClientType;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 
 import static com.minepop.servegame.convosync.Main.COLOR_CHAR;
@@ -20,11 +17,15 @@ import static com.minepop.servegame.convosync.server.ConvoSyncServer.LOGGER;
 public final class Messenger {
 
     private ConvoSyncServer server;
-    protected List<Client> deadClients = new ArrayList<Client>();
-    protected List<Client> newClients = new ArrayList<Client>();
+    private Map<String, String> userMap;
+    private List<Client> aliveClients;
+    protected Set<Client> deadClients = new HashSet<Client>();
+    protected Set<Client> newClients = new HashSet<Client>();
 
     protected Messenger(ConvoSyncServer server) {
         this.server = server;
+        this.aliveClients = server.clients;
+        this.userMap = server.userMap;
     }
 
     protected synchronized void out(Object o, Client sender) {
@@ -34,12 +35,12 @@ public final class Messenger {
 
         if (!newClients.isEmpty()) {
             LOGGER.log(Level.FINE, "Adding {0}", clientListToString(newClients));
-            server.clients.addAll(newClients);
+            aliveClients.addAll(newClients);
             newClients.clear();
         }
 
         if (o instanceof String) {
-            out(new ChatMessage((String) o, false), sender);
+            out(new ChatMessage((String) o, sender == null), sender);
         } else if (o instanceof PrivateMessage) {
             out((PrivateMessage) o, sender);
         } else if (o instanceof PlayerMessage) {
@@ -56,24 +57,25 @@ public final class Messenger {
 
         if (!deadClients.isEmpty()) {
             LOGGER.log(Level.FINE, "Removing {0}", clientListToString(deadClients));
-            server.clients.removeAll(deadClients);
+            aliveClients.removeAll(deadClients);
             deadClients.clear();
         }
     }
-    
-    private static String clientListToString(List<Client> clients) {
+
+    private static String clientListToString(Collection<Client> clients) {
         StringBuilder sb = new StringBuilder();
-        for (int idx = 0; idx < clients.size(); idx++) {
+        Iterator<Client> it = clients.iterator();
+        for (int idx = 0; it.hasNext(); idx++) {
             if (idx != 0) {
                 sb.append(",");
             }
-            sb.append(clients.get(idx).localname);
+            sb.append(it.next().localname);
         }
         return sb.toString();
     }
 
     private void out(ChatMessage msg, Client sender) {
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             if (client != sender && client.auth) {
                 client.sendMsg(msg, false);
             }
@@ -85,13 +87,13 @@ public final class Messenger {
 
     protected void sendPlayerListUpdate() {
         PlayerListUpdate update;
-        update = new PlayerListUpdate(server.userMap.keySet().toArray(
-                new String[server.userMap.size()]), false);
+        update = new PlayerListUpdate(userMap.keySet().toArray(
+                new String[userMap.size()]), false);
         out(update, null);
     }
 
     protected void vanishPlayer(String s) {
-        Set<String> userCopy = (new HashMap<String, String>(server.userMap)).keySet();
+        Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
         userCopy.remove(s);
         PlayerListUpdate update = new PlayerListUpdate(userCopy.toArray(
                 new String[userCopy.size()]), true);
@@ -99,7 +101,7 @@ public final class Messenger {
     }
 
     private void out(PrivateMessage msg, Client sender) {
-        String clientName = server.userMap.get(msg.RECIPIENT);
+        String clientName = userMap.get(msg.RECIPIENT);
         if (clientName.equals("CS-Client")) {
             clientName = msg.RECIPIENT;
         }
@@ -109,7 +111,7 @@ public final class Messenger {
                     msg.SENDER), false);
             return;
         }
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             if (client.localname.equals(clientName)) {
                 client.sendMsg(msg, false);
                 return;
@@ -118,7 +120,7 @@ public final class Messenger {
     }
 
     private void out(PlayerMessage msg, Client sender) {
-        String clientName = server.userMap.get(msg.RECIPIENT);
+        String clientName = userMap.get(msg.RECIPIENT);
         if (clientName == null) {
             LOGGER.log(Level.WARNING, "Is {0} a ghost?", msg.RECIPIENT);
             return;
@@ -126,7 +128,7 @@ public final class Messenger {
         if (clientName.equals("CS-Client")) {
             clientName = msg.RECIPIENT;
         }
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             if (client.localname.equals(clientName)) {
                 client.sendMsg(msg, false);
                 return;
@@ -135,13 +137,15 @@ public final class Messenger {
     }
 
     private void out(CommandMessage msg, Client sender) {
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             if (client.type == ClientType.PLUGIN
                 && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg, false);
                 if (sender != null) {
                     sender.sendMsg(new PlayerMessage(
-                            COLOR_CHAR + "a" + msg + " sent!", msg.SENDER), false);
+                            COLOR_CHAR + "aIssuing command " + COLOR_CHAR + "9"
+                            + msg.CMD + COLOR_CHAR + "a on " + COLOR_CHAR + "9"
+                            + msg.TARGET + COLOR_CHAR + "a.", msg.SENDER), false);
                 }
                 return;
             }
@@ -154,7 +158,7 @@ public final class Messenger {
     }
 
     private void out(PlayerListUpdate update) {
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION && client.auth
                 && (!update.VANISH || !server.getUser(client.name).op)) {
                 client.sendMsg(update, false);
@@ -163,9 +167,9 @@ public final class Messenger {
     }
 
     private void close(DisconnectMessage dmsg) {
-        for (Client client : server.clients) {
+        for (Client client : aliveClients) {
             try {
-                client.close(false, true, dmsg);
+                client.close1(false, true, dmsg);
             } catch (IOException ex) {
                 // ignore
             }

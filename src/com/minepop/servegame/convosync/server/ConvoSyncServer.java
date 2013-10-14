@@ -13,6 +13,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import javax.crypto.*;
+
 import static com.minepop.servegame.convosync.Main.*;
 
 /**
@@ -24,7 +25,7 @@ public final class ConvoSyncServer {
     private int port;
     private ServerSocket socket;
     private Scanner in;
-    protected boolean open = true, debug = false, prefix = true;
+    protected boolean open = true, debug = false, usePrefix = true;
     protected List<Client> clients = new ArrayList<Client>();
     protected String name = "ConvoSyncServer", pluginPassword;
     protected Map<String, String> userMap = new HashMap<String, String>();
@@ -152,8 +153,8 @@ public final class ConvoSyncServer {
                            chatColor);
             }
             prop = p.getProperty("use-prefixes");
-            prefix = prop == null ? true : Boolean.parseBoolean(prop);
-            LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
+            usePrefix = prop == null ? true : Boolean.parseBoolean(prop);
+            LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", usePrefix);
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -331,7 +332,7 @@ public final class ConvoSyncServer {
                     FileOutputStream fos = new FileOutputStream(new File("config.properties"));
                     p.setProperty("chat-color",
                                   chatColor == '\u0000' ? "" : String.valueOf(chatColor));
-                    p.setProperty("use-prefixes", String.valueOf(prefix));
+                    p.setProperty("use-prefixes", String.valueOf(usePrefix));
                     p.store(fos, null);
                     fos.close();
                 } catch (IOException ex) {
@@ -373,9 +374,9 @@ public final class ConvoSyncServer {
                 break;
             case SETUSEPREFIX:
                 if (args.length > 0) {
-                    prefix = Boolean.parseBoolean(args[0]);
+                    usePrefix = Boolean.parseBoolean(args[0]);
                 }
-                LOGGER.log(Level.INFO, "Use Prefix: {0}", prefix);
+                LOGGER.log(Level.INFO, "Use Prefix: {0}", usePrefix);
                 break;
             case KICK:
                 if (args.length < 1) {
@@ -395,8 +396,8 @@ public final class ConvoSyncServer {
                         found = true;
                         LOGGER.log(Level.INFO, "Closing {0}", client);
                         try {
-                            client.completelyClose(true,
-                                                   DisconnectMessage.Reason.KICKED);
+                            client.close2(true, true,
+                                          DisconnectMessage.Reason.KICKED);
                             LOGGER.log(Level.INFO, "Client closed.");
                         } catch (IOException ex) {
                             LOGGER.log(Level.SEVERE, "Error closing {0}: {1}",
@@ -523,36 +524,38 @@ public final class ConvoSyncServer {
                 }
                 break;
             case OP:
-                if (args.length < 1) {
+                if (args.length < 0) {
                     LOGGER.log(Level.INFO, "/users op <user name> [true|false]");
                     break;
                 }
-                if (!isUserRegistered(args[1])) {
+                if (!isUserRegistered(args[0])) {
                     LOGGER.log(Level.INFO, "Invalid user name.");
                     break;
                 }
-                User user = getUser(args[1]);
-                LOGGER.log(Level.INFO, (user.op = (args.length > 2
-                                                   ? Boolean.parseBoolean(args[2])
+                User user = getUser(args[0]);
+                LOGGER.log(Level.INFO, (user.op = (args.length > 1
+                                                   ? Boolean.parseBoolean(args[1])
                                                    : !user.op))
                                        ? "{0} is now OP." : "{0} is no longer OP.",
                            user.NAME);
                 break;
             case UNREGISTER:
-                if (args.length < 1) {
+                if (args.length < 0) {
                     LOGGER.log(Level.INFO, "/users unregister <user name>");
                     break;
                 }
-                Client client = getClient(args[1]);
+                Client client = getClient(args[0]);
                 if (client != null) {
                     try {
-                        client.close(true, true, new DisconnectMessage(DisconnectMessage.Reason.KICKED));
+                        client.close1(true, true,
+                                      new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                     } catch (IOException ex) {
-                        LOGGER.log(Level.WARNING, "Error closing " + client.localname, ex);
+                        LOGGER.log(Level.WARNING, "Error closing {0} : {1}",
+                                   new Object[]{client.localname, ex});
                     }
                 }
-                users.remove(getUser(args[1]));
-                LOGGER.log(Level.INFO, "{0} unregistered.", args[1]);
+                users.remove(getUser(args[0]));
+                LOGGER.log(Level.INFO, "{0} unregistered.", args[0]);
                 break;
         }
     }
