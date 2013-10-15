@@ -504,7 +504,8 @@ public final class ConvoSyncServer {
                                        + "help                      - Prints all commands.\n"
                                        + "debug                     - Toggles debug mode.\n"
                                        + "version                   - Displays version info.\n"
-                                       + "config                    - Generates the server config properties.");
+                                       + "config                    - Generates the server config properties.\n"
+                                       + "say [text]                - Used to chat.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
