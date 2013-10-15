@@ -1,9 +1,11 @@
 package com.minepop.servegame.convosync.server;
 
 import blir.crypto.QuickCipher;
-import blir.util.logging.CompactFormatter;
+import blir.util.logging.QuickFormatter;
+
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,6 +16,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import javax.crypto.*;
 
+import scala.tools.jline.Terminal;
+import scala.tools.jline.console.ConsoleReader;
+
 import static com.minepop.servegame.convosync.Main.*;
 
 /**
@@ -22,18 +27,22 @@ import static com.minepop.servegame.convosync.Main.*;
  */
 public final class ConvoSyncServer {
 
+    public static final Logger LOGGER = Logger.getLogger(
+            ConvoSyncServer.class.getName());
+    private static Handler fileHandler;
+    private static Handler consoleHandler;
+    private static ConsoleReader reader;
+    private static List<ConvoSyncServer> instances = new ArrayList<ConvoSyncServer>(1);
+    private static Scanner in;
+    protected static boolean jline;
     private int port;
     private ServerSocket socket;
-    private Scanner in;
     protected boolean open = true, debug = false, usePrefix = true;
     protected List<Client> clients = new ArrayList<Client>();
     protected String name = "ConvoSyncServer", pluginPassword;
     protected Map<String, String> userMap = new HashMap<String, String>();
     protected List<User> users = new ArrayList<User>();
     protected List<String> banlist = new ArrayList<String>();
-    protected static final Logger LOGGER = Logger.getLogger(
-            ConvoSyncServer.class.getName());
-    private static Handler consoleHandler, fileHandler;
     private Messenger messenger;
     protected char chatColor;
     private QuickCipher cipher;
@@ -50,18 +59,58 @@ public final class ConvoSyncServer {
         OP, LIST, UNREGISTER
     }
 
+    public static int instances() {
+        return instances.size();
+    }
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args)
             throws IOException {
-        consoleHandler = new ConsoleHandler();
-        java.util.logging.Formatter formatter = new CompactFormatter() {
-            @Override
-            public String format(LogRecord rec) {
-                return Main.format(super.format(rec));
+        String format = null;
+        for (String arg : args) {
+            try {
+                if (arg.startsWith("DateFormat:")) {
+                    format = arg.split(":")[1];
+                }
+            } catch (ArrayIndexOutOfBoundsException ex) {
+                // ignore, probably an argument for something else
+            } catch (NullPointerException ex) {
+                // ignore, probably an argument for something else
             }
-        };
+        }
+        in = new Scanner(System.in);
+        java.util.logging.Formatter formatter;
+        try {
+            formatter = new QuickFormatter(format == null ? "HH:mm:ss yyyy/MM/dd" : format) {
+                @Override
+                public String format(LogRecord rec) {
+                    return Main.format(super.format(rec));
+                }
+            };
+            format = null;
+        } catch (IllegalArgumentException ex) {
+            format = ex.getMessage();
+            formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
+                @Override
+                public String format(LogRecord rec) {
+                    return Main.format(super.format(rec));
+                }
+            };
+        }
+        try {
+            reader = new ConsoleReader();
+            reader.setPrompt(">");
+            consoleHandler = new TerminalConsoleHandler(reader);
+            Terminal terminal = reader.getTerminal();
+            terminal.init();
+            terminal.setEchoEnabled(true);
+            jline = terminal.isSupported();
+        } catch (Exception ex) {
+            jline = false;
+            consoleHandler = new ConsoleHandler();
+        }
         consoleHandler.setFormatter(formatter);
         consoleHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(consoleHandler);
@@ -75,16 +124,18 @@ public final class ConvoSyncServer {
         LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
         LOGGER.setLevel(Level.CONFIG);
+        if (format != null) {
+            LOGGER.log(Level.WARNING, "Invalid date format: {0}", format);
+        }
         LOGGER.log(Level.CONFIG, "Logging to {0}", log.getName());
+        LOGGER.log(Level.CONFIG, "Using Scala JLine: {0}", jline);
         new ConvoSyncServer().run(args);
     }
 
     public void run(String[] startupArgs)
             throws IOException {
+        instances.add(this);
         this.startupArgs = startupArgs;
-        LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(
-                java.text.DateFormat.LONG)
-                .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
         LOGGER.log(Level.CONFIG, "Java Version: {0}", System.getProperty("java.version"));
         LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
@@ -160,7 +211,6 @@ public final class ConvoSyncServer {
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "Couldn't load config:", ex);
         }
-        in = new Scanner(System.in);
         for (String arg : startupArgs) {
             try {
                 if (arg.startsWith("Port:")) {
@@ -441,20 +491,20 @@ public final class ConvoSyncServer {
                 break;
             case HELP:
                 LOGGER.log(Level.INFO, "Commands:\n"
-                                       + "/exit [force]              - Closes the socket and exits the program.\n"
-                                       + "/stop [force]              - Same as /exit.\n"
-                                       + "/restart                   - Completely restarts the server.\n"
-                                       + "/reconnect                 - Closes the socket and then reopens it.\n"
-                                       + "/setcolor [color code]     - Sets the color code used for server & client name prefixes.\n"
-                                       + "/setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
-                                       + "/kick <port>               - Closes the socket on the specified port.\n"
-                                       + "/list                      - Lists all connected clients.\n"
-                                       + "/users <list|op|unregister>- Used to manage client users.\n"
-                                       + "/name [name]               - Sets your name to the given name.\n"
-                                       + "/help                      - Prints all commands.\n"
-                                       + "/debug                     - Toggles debug mode.\n"
-                                       + "/version                   - Displays version info.\n"
-                                       + "/config                    - Generates the server config properties.");
+                                       + "exit [force]              - Closes the socket and exits the program.\n"
+                                       + "stop [force]              - Same as /exit.\n"
+                                       + "restart                   - Completely restarts the server.\n"
+                                       + "reconnect                 - Closes the socket and then reopens it.\n"
+                                       + "setcolor [color code]     - Sets the color code used for server & client name prefixes.\n"
+                                       + "setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
+                                       + "kick <port>               - Closes the socket on the specified port.\n"
+                                       + "list                      - Lists all connected clients.\n"
+                                       + "users <list|op|unregister>- Used to manage client users.\n"
+                                       + "name [name]               - Sets your name to the given name.\n"
+                                       + "help                      - Prints all commands.\n"
+                                       + "debug                     - Toggles debug mode.\n"
+                                       + "version                   - Displays version info.\n"
+                                       + "config                    - Generates the server config properties.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
@@ -587,22 +637,24 @@ public final class ConvoSyncServer {
                 try {
                     input = in.nextLine();
                     if (input != null && input.length() > 0) {
-                        if (input.charAt(0) == '/') {
+                        if (input.startsWith("say ")) {
+                            messenger.out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input.substring(4), null);
+                        } else {
                             int delim = input.indexOf(" ");
                             Command cmd;
+                            String value = (delim > 0
+                                            ? input.substring(0, delim)
+                                            : input).toUpperCase();
                             try {
-                                cmd = Command.valueOf((delim > 0
-                                                       ? input.substring(0, delim)
-                                                       : input).substring(1).toUpperCase());
+                                cmd = Command.valueOf(value);
                             } catch (IllegalArgumentException ex) {
-                                cmd = Command.HELP;
+                                LOGGER.log(Level.INFO, "No such command {0}; enter help for help.", value);
+                                continue;
                             }
                             String[] args = delim > 0
                                             ? input.substring(delim + 1).split(" ")
                                             : new String[0];
                             dispatchCommand(cmd, args);
-                        } else {
-                            messenger.out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                         }
                     }
                 } catch (NoSuchElementException ex) {

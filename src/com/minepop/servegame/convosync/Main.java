@@ -4,6 +4,7 @@ import blir.swing.QuickGUI;
 import com.minepop.servegame.convosync.application.ConvoSyncClient;
 import com.minepop.servegame.convosync.server.ConvoSyncServer;
 import java.io.IOException;
+import java.util.logging.Level;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /**
@@ -12,7 +13,7 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.5-dev3.5";
+    public static final String VERSION = "1.0.5-dev4.0";
 
     public static void main(final String[] args)
             throws IOException {
@@ -26,7 +27,13 @@ public class Main {
         // ignore all these; just use the default look and feel
         for (String arg : args) {
             if (arg.equals("server")) {
-                ConvoSyncServer.main(args);
+                int instances = ConvoSyncServer.instances();
+                if (instances == 0) {
+                    ConvoSyncServer.main(args);
+                } else {
+                    ConvoSyncServer.LOGGER.log(Level.INFO, "{0} instances of the ConvoSync server are now running.", instances + 1);
+                    new ConvoSyncServer().run(args);
+                }
                 return;
             }
         }

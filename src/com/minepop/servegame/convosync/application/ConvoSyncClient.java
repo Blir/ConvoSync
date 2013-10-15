@@ -1,9 +1,11 @@
 package com.minepop.servegame.convosync.application;
 
 import blir.swing.QuickGUI;
-import blir.util.logging.CompactFormatter;
+import blir.util.logging.QuickFormatter;
+
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -50,7 +52,7 @@ public final class ConvoSyncClient {
     public ConvoSyncClient()
             throws IOException {
         Handler handler = new ConsoleHandler();
-        Formatter formatter = new CompactFormatter() {
+        Formatter formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
             @Override
             public String format(LogRecord rec) {
                 return Main.format(super.format(rec));
