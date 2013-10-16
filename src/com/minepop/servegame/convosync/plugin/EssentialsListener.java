@@ -1,15 +1,17 @@
 package com.minepop.servegame.convosync.plugin;
 
 import com.earth2me.essentials.Essentials;
+
 import com.minepop.servegame.convosync.net.PlayerVanishMessage;
-import java.util.logging.Level;
+
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.plugin.Plugin;
 
 /**
- *
+ * Used to handler Essentials vanishing compatibility.
+ * 
  * @author Blir
  */
 public class EssentialsListener implements Listener {

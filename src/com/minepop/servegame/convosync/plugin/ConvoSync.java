@@ -2,10 +2,12 @@ package com.minepop.servegame.convosync.plugin;
 
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.Level;
+
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandException;
@@ -41,6 +43,22 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     private EssentialsTask essTask;
     private Map<String, String> lastPM = new HashMap<String, String>();
 
+    /**
+     *
+     * @return the port the plugin is listening on
+     */
+    public int getPort() {
+        return port;
+    }
+    
+    /**
+     *
+     * @return the IP the plugin is connected to
+     */
+    public String getIP() {
+        return ip;
+    }
+    
     @Override
     public void onEnable() {
         try {
@@ -545,15 +563,35 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         }
     }
 
+    /**
+     * Adds a ChatListener. ChatListeners listen to cross-server chat.
+     * 
+     * @param listener the ChatListener to add
+     * @return true if the ChatListener was added
+     */
     public boolean addChatListener(ChatListener listener) {
         return listeners.add(listener);
     }
 
+    /**
+     * Used to listen to cross-server chat.
+     */
     public interface ChatListener {
 
+        /**
+         * Called when cross-server chat occurs.
+         * 
+         * @param msg the chat that occurred
+         */
         public void onInput(String msg);
     }
 
+    /**
+     * Sends cross-server chat.
+     * 
+     * @param s the chat to send
+     * @return true if the chat was sent
+     */
     public boolean chat(String s) {
         return out(s, false);
     }

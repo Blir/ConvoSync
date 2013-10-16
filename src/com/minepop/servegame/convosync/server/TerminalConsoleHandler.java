@@ -3,11 +3,12 @@ package com.minepop.servegame.convosync.server;
 import java.io.IOException;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+
 import scala.tools.jline.console.ConsoleReader;
 
 /**
- *
+ * Used to format console I/O similar to how Bukkit's console works.
+ * 
  * @author Blir
  */
 public class TerminalConsoleHandler extends ConsoleHandler {
@@ -35,7 +36,7 @@ public class TerminalConsoleHandler extends ConsoleHandler {
                 super.flush();
             }
         } catch (IOException ex) {
-            ConvoSyncServer.LOGGER.log(Level.SEVERE, null, ex);
+            ConvoSyncServer.LOGGER.log(Level.SEVERE, "Error flushing the console handler.", ex);
         }
     }
 }

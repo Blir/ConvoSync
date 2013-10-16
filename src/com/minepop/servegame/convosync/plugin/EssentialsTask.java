@@ -1,15 +1,17 @@
 package com.minepop.servegame.convosync.plugin;
 
 import com.earth2me.essentials.Essentials;
+
 import java.util.ArrayList;
 import java.util.List;
+
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.Plugin;
 
 /**
- *
+ * Handles cross-server AFK notifications.
+ * 
  * @author Blir
  */
 public class EssentialsTask implements Runnable {

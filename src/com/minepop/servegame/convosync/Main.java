@@ -1,9 +1,10 @@
 package com.minepop.servegame.convosync;
 
 import blir.swing.QuickGUI;
+
 import com.minepop.servegame.convosync.application.ConvoSyncClient;
 import com.minepop.servegame.convosync.server.ConvoSyncServer;
-import java.io.IOException;
+
 import java.util.logging.Level;
 import javax.swing.UnsupportedLookAndFeelException;
 
@@ -13,10 +14,12 @@ import javax.swing.UnsupportedLookAndFeelException;
  */
 public class Main {
 
-    public static final String VERSION = "1.0.5-dev4.0";
+    /**
+     * The version of this ConvoSync suite.
+     */
+    public static final String VERSION = "1.0.5-dev4.1";
 
-    public static void main(final String[] args)
-            throws IOException {
+    public static void main(final String[] args) {
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {
@@ -39,8 +42,17 @@ public class Main {
         }
         new ConvoSyncClient().run(args);
     }
+    /**
+     * The section (§) symbol Minecraft uses to format chat.
+     */
     public static final char COLOR_CHAR = '\u00A7';
 
+    /**
+     * Removes any Minecraft formatting codes from the given String.
+     *
+     * @param s the String to strip
+     * @return the stripped String
+     */
     public static String format(String s) {
         return s.replaceAll(COLOR_CHAR + "\\w", "");
     }

@@ -2,6 +2,7 @@ package com.minepop.servegame.convosync.server;
 
 import com.minepop.servegame.convosync.net.*;
 import com.minepop.servegame.convosync.server.Client.ClientType;
+
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
@@ -11,7 +12,9 @@ import static com.minepop.servegame.convosync.Main.format;
 import static com.minepop.servegame.convosync.server.ConvoSyncServer.LOGGER;
 
 /**
- *
+ * Handles all operations that involve iterating through or modifying the list
+ * of alive clients. This is in order to be more thread safe.
+ * 
  * @author Blir
  */
 public final class Messenger {
@@ -19,7 +22,13 @@ public final class Messenger {
     private ConvoSyncServer server;
     private Map<String, String> userMap;
     private List<Client> aliveClients;
+    /**
+     * Clients whose alive variable is false; to be removed from aliveClients.
+     */
     protected Set<Client> deadClients = new HashSet<Client>();
+    /**
+     * Clients that have just connected. To be added to aliveClients.
+     */
     protected Set<Client> newClients = new HashSet<Client>();
 
     protected Messenger(ConvoSyncServer server) {
@@ -28,6 +37,14 @@ public final class Messenger {
         this.userMap = server.userMap;
     }
 
+    /**
+     * Used to send all messages that require iterating through the list of
+     * clients. This is in order to be more thread safe.
+     *
+     * @param o the message to be sent
+     * @param sender the sender of the message, null if from no particular
+     * client
+     */
     protected synchronized void out(Object o, Client sender) {
         if (sender != null && !sender.auth) {
             return;
@@ -81,10 +98,13 @@ public final class Messenger {
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
-                   new Object[]{sender == null ? "NA" : sender.socket.getPort(),
-                                format(msg.MSG)});
+                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
+            format(msg.MSG)});
     }
 
+    /**
+     * Updates the player list for the APPLICATION clients.
+     */
     protected void sendPlayerListUpdate() {
         PlayerListUpdate update;
         update = new PlayerListUpdate(userMap.keySet().toArray(
@@ -92,6 +112,13 @@ public final class Messenger {
         out(update, null);
     }
 
+    /**
+     * Used to vanish (as defined by Essentials) the player with the specified
+     * name. The name of the specified player is removed from the player list on
+     * the ConvoSyncClient GUI clients. This does not affect OPs.
+     *
+     * @param s the Minecraft user name of the player to vanish
+     */
     protected void vanishPlayer(String s) {
         Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
         userCopy.remove(s);
@@ -139,7 +166,7 @@ public final class Messenger {
     private void out(CommandMessage msg, Client sender) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.PLUGIN
-                && client.name.equalsIgnoreCase(msg.TARGET)) {
+                    && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg, false);
                 if (sender != null) {
                     sender.sendMsg(new PlayerMessage(
@@ -160,7 +187,7 @@ public final class Messenger {
     private void out(PlayerListUpdate update) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION && client.auth
-                && (!update.VANISH || !server.getUser(client.name).op)) {
+                    && (!update.VANISH || !server.getUser(client.name).op)) {
                 client.sendMsg(update, false);
             }
         }
@@ -169,9 +196,10 @@ public final class Messenger {
     private void close(DisconnectMessage dmsg) {
         for (Client client : aliveClients) {
             try {
-                client.close1(false, true, dmsg);
+                client.close(false, true, dmsg);
             } catch (IOException ex) {
-                // ignore
+                LOGGER.log(Level.FINE, "Error closing {0} : {1}",
+                        new Object[]{client.localname, ex});
             }
         }
     }

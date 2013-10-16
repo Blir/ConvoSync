@@ -21,9 +21,15 @@ public final class ConvoSyncClient {
 
     private ConvoSyncGUI gui;
     private LoginGUI login;
+    /**
+     * The Minecraft user name of the user on this ConvoSync client.
+     */
     protected String name;
     private String ip, password;
     private int port;
+    /**
+     * The connection timeout value to use when connecting to the server.
+     */
     protected int timeout = 20000;
     private Socket socket;
     protected boolean pm, connected, auth;
@@ -32,11 +38,39 @@ public final class ConvoSyncClient {
     private ObjectOutputStream out;
     protected static final Logger LOGGER = Logger.getLogger(ConvoSyncClient.class.getName());
 
+    static {
+        Handler handler = new ConsoleHandler();
+        Formatter formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
+            @Override
+            public String format(LogRecord rec) {
+                return Main.format(super.format(rec));
+            }
+        };
+        LOGGER.setUseParentHandlers(false);
+        LOGGER.setLevel(Level.FINEST);
+        handler.setFormatter(formatter);
+        handler.setLevel(Level.FINEST);
+        LOGGER.addHandler(handler);
+        try {
+            handler = new FileHandler("CS-Client.log", true);
+            handler.setFormatter(formatter);
+            handler.setLevel(Level.FINEST);
+            LOGGER.addHandler(handler);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "Couldn't initialize file handler.", ex);
+        }
+        LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
+                .format(java.util.Calendar.getInstance().getTime()));
+        LOGGER.log(Level.CONFIG, "Java Version: {0}", System.getProperty("java.version"));
+        LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
+        LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
+        LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
+    }
+    
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args)
-            throws IOException {
+    public static void main(String[] args) {
         try {
             QuickGUI.setLookAndFeel("Windows");
         } catch (ClassNotFoundException ex) {
@@ -49,31 +83,8 @@ public final class ConvoSyncClient {
         new ConvoSyncClient().run(args);
     }
 
-    public ConvoSyncClient()
-            throws IOException {
-        Handler handler = new ConsoleHandler();
-        Formatter formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
-            @Override
-            public String format(LogRecord rec) {
-                return Main.format(super.format(rec));
-            }
-        };
-        handler.setFormatter(formatter);
-        handler.setLevel(Level.FINEST);
-        LOGGER.addHandler(handler);
-        handler = new FileHandler("CS-Client.log", true);
-        handler.setFormatter(formatter);
-        handler.setLevel(Level.FINEST);
-        LOGGER.addHandler(handler);
-        LOGGER.setUseParentHandlers(false);
-        LOGGER.setLevel(Level.FINEST);
-        LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
-                .format(java.util.Calendar.getInstance().getTime()));
+    public ConvoSyncClient() {
         LOGGER.log(Level.INFO, toString());
-        LOGGER.log(Level.CONFIG, "Java Version: {0}", System.getProperty("java.version"));
-        LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
-        LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
-        LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
     }
 
     public void run(String[] args) {
@@ -133,7 +144,7 @@ public final class ConvoSyncClient {
     }
 
     protected String connect(String ip, int port, String password,
-                             boolean remember) {
+            boolean remember) {
         this.ip = ip;
         this.port = port;
         this.password = password;
@@ -162,7 +173,7 @@ public final class ConvoSyncClient {
         try {
             gui.clearUserList();
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...",
-                       new Object[]{ip, port});
+                    new Object[]{ip, port});
             socket = new Socket();
             socket.connect(new InetSocketAddress(ip, port), timeout);
             in = new ObjectInputStream(socket.getInputStream());
@@ -245,7 +256,7 @@ public final class ConvoSyncClient {
             PrivateMessage pmsg = (PrivateMessage) msg;
             gui.log("[[" + pmsg.SERVER + "] " + pmsg.SENDER + "] -> me] " + pmsg.MSG);
             out(new PlayerMessage(Main.COLOR_CHAR + "6[me -> [CS-Client]" + name
-                                  + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
+                    + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
             return;
         }
         if (msg instanceof PlayerMessage) {

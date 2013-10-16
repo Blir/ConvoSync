@@ -2,6 +2,7 @@ package com.minepop.servegame.convosync.server;
 
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -14,17 +15,51 @@ import static com.minepop.servegame.convosync.Main.format;
 import static com.minepop.servegame.convosync.server.ConvoSyncServer.LOGGER;
 
 /**
+ * Instances of this class are server side representations of connected clients.
  *
  * @author Blir
  */
 public final class Client implements Runnable {
 
     protected Socket socket;
+    /**
+     * The type of client this client is. APPLICATION means it's a GUI
+     * application client. PLUGIN means it's a plugin client.
+     */
     protected ClientType type;
     private ObjectOutputStream out;
     private ObjectInputStream in;
-    protected boolean alive = true, auth = false, enabled = true;
-    protected String name, localname, version;
+    /**
+     * Whether the Client is alive. Once it's dead, it doesn't go back.
+     */
+    protected boolean alive = true;
+    /**
+     * Whether the Client is authenticated. The Client must be authenticated to
+     * utilize cross-server chat, commands, private messages, and some other
+     * features. If the client type is APPLICATION, then it must authenticate
+     * with its own registered server side password. If the client type is
+     * PLUGIN, it must authenticate with the server side plugin password.
+     */
+    protected boolean auth = false;
+    /**
+     * Whether cross-server chat is enabled for this Client.
+     */
+    protected boolean enabled = true;
+    /**
+     * The name of this Client for use in chat and private messages.
+     * May contain special characters for color formatting.
+     */
+    protected String name;
+    /**
+     * Same as name, but without any special color characters. Use this for
+     * displaying the name in the console, or anywhere you don't want the color
+     * characters.
+     */
+    protected String localname;
+    /**
+     * The version of the ConvoSync suite that this Client connected with.
+     */
+    protected String version;
     private ConvoSyncServer server;
     private Messenger messenger;
 
@@ -55,7 +90,7 @@ public final class Client implements Runnable {
                     LOGGER.log(Level.WARNING,
                             "Kicking {0}; unexpected input: {1}",
                             new Object[]{localname, input});
-                    close2(true, true, DisconnectMessage.Reason.KICKED);
+                    close(true, true, DisconnectMessage.Reason.KICKED);
                 }
             } catch (IOException ex) {
                 LOGGER.log(Level.FINE, "Couldn't read from socket in {0}: {1}",
@@ -112,7 +147,7 @@ public final class Client implements Runnable {
                             messenger.out(new PlayerMessage(
                                     "You cannot be logged into the client and the game simultaneously.",
                                     element), this);
-                            client.close1(true, true,
+                            client.close(true, true,
                                     new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                             messenger.deadClients.add(client);
                         }
@@ -154,7 +189,7 @@ public final class Client implements Runnable {
                         messenger.out(new PlayerMessage(
                                 "You cannot be logged into the client and the game simultaneously.",
                                 element), this);
-                        client.close1(true, true,
+                        client.close(true, true,
                                 new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                     }
                 }
@@ -242,11 +277,18 @@ public final class Client implements Runnable {
                         user), sender), false);
             }
         } else if (msg instanceof DisconnectMessage) {
-            close2(false, false, null);
+            close(false, false, (DisconnectMessage) null);
             messenger.out(name + " has disconnected.", this);
         }
     }
 
+    /**
+     * Writes a Message to the Socket.
+     * 
+     * @param msg the Message to be written
+     * @param override if true, send the Message no matter the value of enabled.
+     * Use false for chat, and true for important stuff.
+     */
     protected void sendMsg(Message msg, boolean override) {
         if (enabled || override) {
             sendMsg(msg);
@@ -274,10 +316,18 @@ public final class Client implements Runnable {
         }
     }
 
-    protected void close1(boolean kick, boolean msg, DisconnectMessage dmsg)
+    /**
+     * Closes this Client. This in turn closes its socket.
+     * 
+     * @param kick whether the Client is being kicked
+     * @param msg whether to write a DisconnectMessage to the socket
+     * @param dmsg the DisconectMessage to write
+     * @throws IOException if the socket closes improperly
+     */
+    protected void close(boolean kick, boolean msg, DisconnectMessage dmsg)
             throws IOException {
         messenger.deadClients.add(this);
-        if (msg) {
+        if (msg && dmsg != null) {
             sendMsg(dmsg, true);
         }
         alive = false;
@@ -296,16 +346,25 @@ public final class Client implements Runnable {
         messenger.sendPlayerListUpdate();
     }
 
-    protected void close2(boolean kick, boolean msg,
+    /**
+     * Closes this Client.
+     * Equivalent to close(kick, msg, new DisconnectMessage(reason)).
+     * 
+     * @param kick whether the Client is being kicked
+     * @param msg whether to write a DisconnectMessage to the socket
+     * @param reason the reason for which the Client is being disconnected
+     * @throws IOException if the socket closes improperly
+     */
+    protected void close(boolean kick, boolean msg,
             DisconnectMessage.Reason reason)
             throws IOException {
-        close1(kick, msg, new DisconnectMessage(reason));
+        close(kick, msg, reason == null ? null : new DisconnectMessage(reason));
     }
 
     private void crash(Throwable t) {
         LOGGER.log(Level.WARNING, "Closing {0}", localname);
         try {
-            close2(false, false, DisconnectMessage.Reason.CRASHED);
+            close(false, false, DisconnectMessage.Reason.CRASHED);
         } catch (IOException ex) {
             // ignore
         }
