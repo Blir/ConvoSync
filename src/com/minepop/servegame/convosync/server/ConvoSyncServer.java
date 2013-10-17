@@ -44,7 +44,7 @@ public final class ConvoSyncServer {
      * Controls whether prefixes are used for plugin clients in chat.
      */
     protected boolean usePrefix = true;
-    protected List<Client> clients = Collections.synchronizedList(new ArrayList<Client>());
+    protected final List<Client> clients = Collections.synchronizedList(new ArrayList<Client>());
     protected String name = "ConvoSyncServer", pluginPassword;
     protected Map<String, String> userMap = new HashMap<String, String>();
     /**

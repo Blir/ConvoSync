@@ -14,14 +14,14 @@ import static com.minepop.servegame.convosync.server.ConvoSyncServer.LOGGER;
 /**
  * Handles all operations that involve iterating through or modifying the list
  * of alive clients. This is in order to be more thread safe.
- * 
+ *
  * @author Blir
  */
 public final class Messenger {
 
     private ConvoSyncServer server;
     private Map<String, String> userMap;
-    private List<Client> aliveClients;
+    private final List<Client> aliveClients;
     /**
      * Clients whose alive variable is false; to be removed from aliveClients.
      */
@@ -41,41 +41,44 @@ public final class Messenger {
      * Used to send all messages that require iterating through the list of
      * clients. This is in order to be more thread safe.
      *
-     * @param o the message to be sent
+     * @param o      the message to be sent
      * @param sender the sender of the message, null if from no particular
-     * client
+     *               client
      */
-    protected synchronized void out(Object o, Client sender) {
+    protected void out(Object o, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
 
-        if (!newClients.isEmpty()) {
-            LOGGER.log(Level.FINE, "Adding {0}", clientListToString(newClients));
-            aliveClients.addAll(newClients);
-            newClients.clear();
-        }
+        synchronized (aliveClients) {
 
-        if (o instanceof String) {
-            out(new ChatMessage((String) o, sender == null), sender);
-        } else if (o instanceof PrivateMessage) {
-            out((PrivateMessage) o, sender);
-        } else if (o instanceof PlayerMessage) {
-            out((PlayerMessage) o, sender);
-        } else if (o instanceof ChatMessage) {
-            out((ChatMessage) o, sender);
-        } else if (o instanceof CommandMessage) {
-            out((CommandMessage) o, sender);
-        } else if (o instanceof PlayerListUpdate) {
-            out((PlayerListUpdate) o);
-        } else if (o instanceof DisconnectMessage) {
-            close((DisconnectMessage) o);
-        }
+            if (!newClients.isEmpty()) {
+                LOGGER.log(Level.FINE, "Adding {0}", clientListToString(newClients));
+                aliveClients.addAll(newClients);
+                newClients.clear();
+            }
 
-        if (!deadClients.isEmpty()) {
-            LOGGER.log(Level.FINE, "Removing {0}", clientListToString(deadClients));
-            aliveClients.removeAll(deadClients);
-            deadClients.clear();
+            if (o instanceof String) {
+                out(new ChatMessage((String) o, sender == null), sender);
+            } else if (o instanceof PrivateMessage) {
+                out((PrivateMessage) o, sender);
+            } else if (o instanceof PlayerMessage) {
+                out((PlayerMessage) o, sender);
+            } else if (o instanceof ChatMessage) {
+                out((ChatMessage) o, sender);
+            } else if (o instanceof CommandMessage) {
+                out((CommandMessage) o, sender);
+            } else if (o instanceof PlayerListUpdate) {
+                out((PlayerListUpdate) o);
+            } else if (o instanceof DisconnectMessage) {
+                close((DisconnectMessage) o);
+            }
+
+            if (!deadClients.isEmpty()) {
+                LOGGER.log(Level.FINE, "Removing {0}", clientListToString(deadClients));
+                aliveClients.removeAll(deadClients);
+                deadClients.clear();
+            }
         }
     }
 
@@ -98,8 +101,8 @@ public final class Messenger {
             }
         }
         LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
-            format(msg.MSG)});
+                   new Object[]{sender == null ? "NA" : sender.socket.getPort(),
+                                format(msg.MSG)});
     }
 
     /**
@@ -166,7 +169,7 @@ public final class Messenger {
     private void out(CommandMessage msg, Client sender) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.PLUGIN
-                    && client.name.equalsIgnoreCase(msg.TARGET)) {
+                && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg, false);
                 if (sender != null) {
                     sender.sendMsg(new PlayerMessage(
@@ -187,7 +190,7 @@ public final class Messenger {
     private void out(PlayerListUpdate update) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION && client.auth
-                    && (!update.VANISH || !server.getUser(client.name).op)) {
+                && (!update.VANISH || !server.getUser(client.name).op)) {
                 client.sendMsg(update, false);
             }
         }
@@ -199,7 +202,7 @@ public final class Messenger {
                 client.close(false, true, dmsg);
             } catch (IOException ex) {
                 LOGGER.log(Level.FINE, "Error closing {0} : {1}",
-                        new Object[]{client.localname, ex});
+                           new Object[]{client.localname, ex});
             }
         }
     }
