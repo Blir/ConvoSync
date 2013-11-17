@@ -1,6 +1,7 @@
 package com.minepop.servegame.convosync.plugin;
 
 import java.util.Set;
+
 import org.bukkit.Server;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permission;
@@ -9,7 +10,9 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 import org.bukkit.plugin.Plugin;
 
 /**
- *
+ * Used to represent any server of a cross-server command.
+ * If an exception thrown by this class breaks your plugin, I am sorry.
+ * 
  * @author Blir
  */
 public class RemoteCommandSender implements CommandSender {
@@ -65,7 +68,8 @@ public class RemoteCommandSender implements CommandSender {
     }
 
     @Override
-    public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln) {
+    public PermissionAttachment addAttachment(Plugin plugin, String string,
+                                              boolean bln) {
         throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 
@@ -75,7 +79,8 @@ public class RemoteCommandSender implements CommandSender {
     }
 
     @Override
-    public PermissionAttachment addAttachment(Plugin plugin, String string, boolean bln, int i) {
+    public PermissionAttachment addAttachment(Plugin plugin, String string,
+                                              boolean bln, int i) {
         throw new UnsupportedOperationException("This CommandSender's permissions cannot be changed.");
     }
 

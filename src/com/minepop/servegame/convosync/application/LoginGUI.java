@@ -11,12 +11,19 @@ import java.awt.Cursor;
  */
 public class LoginGUI extends javax.swing.JFrame {
 
-    private ConvoSyncClient client;
+    private final ConvoSyncClient client;
 
     /**
      * Creates new form LoginGUI
+     * @param client
+     * @param ip
+     * @param port
+     * @param user
+     * @param password
+     * @param remember
      */
-    protected LoginGUI(ConvoSyncClient client, String ip, int port, String user, String password, boolean remember) {
+    protected LoginGUI(ConvoSyncClient client, String ip, int port, String user,
+                       String password, boolean remember) {
         super("CS" + Main.VERSION);
         this.client = client;
         initComponents();
@@ -35,7 +42,7 @@ public class LoginGUI extends javax.swing.JFrame {
         jCheckBox1.setSelected(remember);
         setLocationRelativeTo(null);
     }
-    
+
     protected void setLabel(String s) {
         jLabel4.setText(s);
     }
@@ -191,7 +198,9 @@ public class LoginGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onLogin
 
     private void onChangeConnectionTimeout(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onChangeConnectionTimeout
-        new InputBox("ConvoSyncClient - Change Connection Timeout", "Enter a connection timeout value in milliseconds: ", new InputListener() {
+        new InputBox("ConvoSyncClient - Change Connection Timeout",
+                "Enter a connection timeout value in milliseconds: ",
+                new InputListener() {
             @Override
             public void onInput(String input) {
                 try {
@@ -210,7 +219,6 @@ public class LoginGUI extends javax.swing.JFrame {
             }
         }, false).setVisible(true);
     }//GEN-LAST:event_onChangeConnectionTimeout
-
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton jButton1;
     private javax.swing.JCheckBox jCheckBox1;

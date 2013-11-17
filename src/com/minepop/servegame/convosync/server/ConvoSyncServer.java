@@ -1,19 +1,22 @@
 package com.minepop.servegame.convosync.server;
 
 import blir.crypto.QuickCipher;
-import blir.util.logging.CompactFormatter;
+import blir.util.logging.QuickFormatter;
+
 import com.minepop.servegame.convosync.Main;
 import com.minepop.servegame.convosync.net.*;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.logging.*;
-import static com.minepop.servegame.convosync.Main.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import javax.crypto.*;
+
+import static com.minepop.servegame.convosync.Main.*;
 
 /**
  *
@@ -21,63 +24,134 @@ import javax.crypto.*;
  */
 public final class ConvoSyncServer {
 
-    private static enum Command {
+    public static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
+    private static Handler fileHandler;
+    private static Handler consoleHandler;
+    private static final List<ConvoSyncServer> instances = new LinkedList<ConvoSyncServer>();
+    private static Scanner in;
+    private int port;
+    private ServerSocket socket;
+    protected boolean open = true, debug = false;
+    /**
+     * Controls whether prefixes are used for plugin clients in chat.
+     */
+    protected boolean usePrefix = true;
+    protected final List<Client> clients = Collections.synchronizedList(new ArrayList<Client>());
+    protected String name = "ConvoSyncServer", pluginPassword;
+    protected Map<String, String> userMap = new HashMap<String, String>();
+    /**
+     * List of registered ConvoSyncClient users.
+     */
+    protected Map<String, User> users = new HashMap<String, User>();
+    /**
+     * List of the Minecraft user names of banned ConvoSyncClient users.
+     */
+    protected List<String> banlist = new LinkedList<String>();
+    /**
+     * Used to send all messages that require iterating through the clients in
+     * order to be more thread safe.
+     */
+    protected Messenger messenger;
+    /**
+     * The color that client names are in chat.
+     */
+    protected char chatColor;
+    private QuickCipher cipher;
+    private String[] startupArgs;
+
+    /**
+     * Used to represent all commands.
+     */
+    public static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
         USERS, NAME, HELP, DEBUG, VERSION, CONFIG
     }
 
-    private static enum SubCommand {
+    /**
+     * Used to represent all sub-commands.
+     */
+    public static enum SubCommand {
 
         OP, LIST, UNREGISTER
     }
-    private int port;
-    private ServerSocket socket;
-    private Scanner in;
-    private boolean open = true, debug = false, prefix = true;
-    private final List<Client> clients = new ArrayList<Client>();
-    private String name = "ConvoSyncServer", pluginPassword;
-    private Map<String, String> userMap = new HashMap<String, String>();
-    private List<User> users = new ArrayList<User>();
-    private List<String> banlist = new ArrayList<String>();
-    private static final Logger LOGGER = Logger.getLogger(ConvoSyncServer.class.getName());
-    private static Handler consoleHandler, fileHandler;
-    private char chatColor;
-    private QuickCipher cipher;
-    private String[] startupArgs;
+
+    /**
+     *
+     * @return the number of instances of ConvoSyncServer running
+     */
+    public static int instances() {
+        return instances.size();
+    }
 
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
-        consoleHandler = new ConsoleHandler();
-        java.util.logging.Formatter formatter = new CompactFormatter() {
-            @Override
-            public String format(LogRecord rec) {
-                return Main.format(super.format(rec));
+    public static void main(String[] args) {
+        String format = null;
+        for (String arg : args) {
+            try {
+                if (arg.startsWith("DateFormat:")) {
+                    format = arg.split(":")[1];
+                }
+            } catch (ArrayIndexOutOfBoundsException ex) {
+                // ignore, probably an argument for something else
+            } catch (NullPointerException ex) {
+                // ignore, probably an argument for something else
             }
-        };
+        }
+        in = new Scanner(System.in);
+        java.util.logging.Formatter formatter;
+        try {
+            formatter = new QuickFormatter(format == null ? "HH:mm:ss yyyy/MM/dd" : format) {
+                @Override
+                public String format(LogRecord rec) {
+                    return Main.format(super.format(rec));
+                }
+            };
+            format = null;
+        } catch (IllegalArgumentException ex) {
+            format = ex.getMessage();
+            formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
+                @Override
+                public String format(LogRecord rec) {
+                    return Main.format(super.format(rec));
+                }
+            };
+        }
+        consoleHandler = new ConsoleHandler();
         consoleHandler.setFormatter(formatter);
         consoleHandler.setLevel(Level.CONFIG);
         LOGGER.addHandler(consoleHandler);
-        File log = new File("CS-Server.log");
-        for (int idx = 0; log.length() > 5242880; idx++) {
+        File log = new File("CS-Server0.log");
+        for (int idx = 1; log.length() > 5242880; idx++) {
             log = new File("CS-Server" + idx + ".log");
         }
-        fileHandler = new FileHandler(log.getName(), true);
-        fileHandler.setFormatter(formatter);
-        fileHandler.setLevel(Level.CONFIG);
-        LOGGER.addHandler(fileHandler);
         LOGGER.setUseParentHandlers(false);
+        try {
+            fileHandler = new FileHandler(log.getName(), true);
+            fileHandler.setFormatter(formatter);
+            fileHandler.setLevel(Level.CONFIG);
+            LOGGER.addHandler(fileHandler);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "Couldn't initialize the file handler.", ex);
+        }
         LOGGER.setLevel(Level.CONFIG);
+        if (format != null) {
+            LOGGER.log(Level.WARNING, "Invalid date format: {0}", format);
+        }
         LOGGER.log(Level.CONFIG, "Logging to {0}", log.getName());
         new ConvoSyncServer().run(args);
     }
 
-    public void run(String[] startupArgs) throws IOException {
+    /**
+     * Runs the ConvoSyncServer.
+     *
+     * @param startupArgs command line arguments
+     */
+    public void run(String[] startupArgs) {
+        instances.add(this);
         this.startupArgs = startupArgs;
-        LOGGER.log(Level.INFO, java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG)
-                .format(java.util.Calendar.getInstance().getTime()));
         LOGGER.log(Level.INFO, toString());
         LOGGER.log(Level.CONFIG, "Java Version: {0}", System.getProperty("java.version"));
         LOGGER.log(Level.CONFIG, "OS Architexture: {0}", System.getProperty("os.arch"));
@@ -89,7 +163,10 @@ public final class ConvoSyncServer {
             cipher = new QuickCipher("DES/ECB/PKCS5Padding", "DES");
             cipher.decrypt(new File("users.sav.dat"), decrypted, new File("key.dat"));
             ois = new ObjectInputStream(new FileInputStream(decrypted));
-            users.addAll(Arrays.asList((User[]) ois.readObject()));
+            User[] userArr = (User[]) ois.readObject();
+            for (User user : userArr) {
+                users.put(user.NAME, user);
+            }
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -111,7 +188,11 @@ public final class ConvoSyncServer {
         } finally {
             try {
                 if (ois != null) {
-                    ois.close();
+                    try {
+                        ois.close();
+                    } catch (IOException ex) {
+                        LOGGER.log(Level.SEVERE, "Error closing output stream.", ex);
+                    }
                 }
             } finally {
                 decrypted.delete();
@@ -125,15 +206,12 @@ public final class ConvoSyncServer {
             scanner.close();
         } catch (FileNotFoundException ex) {
             // ignore
-        } catch (IOException ex) {
-            LOGGER.log(Level.SEVERE, "Error loading ban list.", ex);
         }
-        Properties p = null;
         try {
-            p = new Properties();
+            Properties p = new Properties();
             FileInputStream fis = null;
             try {
-                fis = new FileInputStream(new File("CS-Server.properties"));
+                fis = new FileInputStream(new File("config.properties"));
                 p.load(fis);
             } finally {
                 if (fis != null) {
@@ -141,17 +219,19 @@ public final class ConvoSyncServer {
                 }
             }
             String prop = p.getProperty("chat-color");
-            chatColor = prop == null ? '\u0000' : prop.charAt(0);
-            LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"", chatColor);
+            chatColor = prop.length() < 1 ? '\u0000' : prop.charAt(0);
+            if (chatColor != '\u0000') {
+                LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"",
+                           chatColor);
+            }
             prop = p.getProperty("use-prefixes");
-            prefix = prop == null ? true : Boolean.parseBoolean(prop);
-            LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", prefix);
+            usePrefix = prop == null ? true : Boolean.parseBoolean(prop);
+            LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", usePrefix);
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "Couldn't load config:", ex);
         }
-        in = new Scanner(System.in);
         for (String arg : startupArgs) {
             try {
                 if (arg.startsWith("Port:")) {
@@ -167,24 +247,39 @@ public final class ConvoSyncServer {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             }
         }
-        if (p != null) {
-            String prop = p.getProperty("port");
+        try {
+            FileInputStream fis = null;
             try {
-                port = Integer.parseInt(prop);
-            } catch (NumberFormatException ex) {
+                fis = new FileInputStream(new File("connection.properties"));
+                Properties p = new Properties();
+                p.load(fis);
+                String prop = p.getProperty("port");
+                try {
+                    port = Integer.parseInt(prop);
+                } catch (NumberFormatException ex) {
+                    if (prop != null) {
+                        LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                    }
+                }
+                prop = p.getProperty("name");
                 if (prop != null) {
-                    LOGGER.log(Level.SEVERE, "Invalid config: {0}", prop);
+                    name = prop;
+                }
+                prop = p.getProperty("plugin-password");
+                if (prop != null) {
+                    pluginPassword = prop;
+                }
+            } finally {
+                if (fis != null) {
+                    fis.close();
                 }
             }
-            prop = p.getProperty("name");
-            if (prop != null) {
-                name = prop;
-            }
-            prop = p.getProperty("plugin-password");
-            if (prop != null) {
-                pluginPassword = prop;
-            }
+        } catch (FileNotFoundException ex) {
+            // ignore
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "Couldn't load connection config: ", ex);
         }
+
         while (port == 0) {
             System.out.print("Enter port: ");
             try {
@@ -197,45 +292,80 @@ public final class ConvoSyncServer {
                 System.out.println("You did not enter a valid number.");
             }
         }
+
         while (pluginPassword == null || pluginPassword.equals("")) {
             System.out.print("Enter a password that the ConvoSync plugins will use to connect: ");
             pluginPassword = in.nextLine();
         }
-        open();
+
+        try {
+            open();
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error opening socket.", ex);
+            return;
+        }
+
+        messenger = new Messenger(this);
 
         new Thread(new ConnectionAcceptionTask()).start();
 
         new Thread(new InputTask()).start();
-    }
 
-    private boolean alive() {
-        for (Client client : clients) {
-            if (client.alive) {
-                return true;
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                if (open) {
+                    try {
+                        close(true, DisconnectMessage.Reason.CRASHED);
+                    } catch (IOException ex) {
+                        // ignore
+                    }
+                }
             }
-        }
-        return false;
+        }));
     }
 
-    private void restart() throws IOException {
+    /**
+     * Restarts (calls close() and then open()) the ConvoSyncServer.
+     *
+     * @throws IOException if either close() or open() throw it
+     */
+    public void restart()
+            throws IOException {
         close(false, DisconnectMessage.Reason.RESTARTING);
         open();
     }
 
-    private void open() throws IOException {
+    /**
+     * Opens the ConvoSyncServer.
+     *
+     * @throws IOException if the socket couldn't be initialized
+     */
+    public void open()
+            throws IOException {
         socket = new ServerSocket(port);
         LOGGER.log(Level.INFO, socket.toString());
     }
 
-    private synchronized void close(boolean force, DisconnectMessage.Reason reason) throws IOException {
+    /**
+     * Closes the ConvoSyncServer.
+     *
+     * @throws IOException if the server is already closed
+     */
+    public void close()
+            throws IOException {
+        close(false, DisconnectMessage.Reason.CLOSING);
+    }
+
+    private void close(boolean force, DisconnectMessage.Reason reason)
+            throws IOException {
         LOGGER.log(Level.INFO, "Closing {0}", this);
         try {
             socket.close();
         } finally {
             try {
-                for (Client client : clients) {
-                    client.close(false, true, reason);
-                }
+                messenger.out(new DisconnectMessage(reason), null);
             } finally {
                 userMap.clear();
                 clients.clear();
@@ -246,122 +376,7 @@ public final class ConvoSyncServer {
         }
     }
 
-    private synchronized void out(String msg, Client sender) {
-        if (sender != null && !sender.auth) {
-            return;
-        }
-        for (Client client : clients) {
-            if (client != sender && client.auth) {
-                if (sender == null && client.enabled) {
-                    client.sendMsg(new ChatMessage(msg, true), false);
-                } else {
-                    client.sendMsg(msg, false);
-                }
-            }
-        }
-        LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
-            format(msg)});
-    }
-
-    private synchronized void out(ChatMessage msg, Client sender) {
-        if (sender != null && !sender.auth) {
-            return;
-        }
-        for (Client client : clients) {
-            if (client != sender && client.auth) {
-                client.sendMsg(msg, false);
-            }
-        }
-        LOGGER.log(Level.INFO, "[{0}] {1} ",
-                new Object[]{sender == null ? "NA" : sender.socket.getPort(),
-            format(msg.MSG)});
-    }
-
-    private synchronized void sendPlayerListUpdate() {
-        String[] list = userMap.keySet().toArray(new String[userMap.size()]);
-        PlayerListUpdate update = new PlayerListUpdate(list);
-        for (Client client : clients) {
-            if (client.type == ClientType.APPLICATION && client.auth) {
-                client.sendMsg(update, false);
-            }
-        }
-    }
-
-    private synchronized void vanishPlayer(String s) {
-        Set<String> userCopy = (new HashMap<String, String>(userMap)).keySet();
-        userCopy.remove(s);
-        PlayerListUpdate update = new PlayerListUpdate(userCopy.toArray(new String[userCopy.size()]));
-        for (Client client : clients) {
-            if (client.type == ClientType.APPLICATION && !getUser(client.name).op) {
-                client.sendMsg(update, false);
-            }
-        }
-    }
-
-    private synchronized void out(PrivateMessage msg, Client sender) {
-        if (sender != null && !sender.auth) {
-            return;
-        }
-        String clientName = userMap.get(msg.RECIPIENT);
-        if (clientName.equals("CS-Client")) {
-            clientName = msg.RECIPIENT;
-        }
-        if (clientName == null && sender != null) {
-            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cPlayer \""
-                    + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR
-                    + "c\" not found.", msg.SENDER), false);
-            return;
-        }
-        for (Client client : clients) {
-            if (client.localname.equals(clientName)) {
-                client.sendMsg(msg, false);
-            }
-        }
-    }
-
-    private synchronized void out(PlayerMessage msg, Client sender) {
-        if (sender != null && !sender.auth) {
-            return;
-        }
-        String clientName = userMap.get(msg.RECIPIENT);
-        if (clientName == null) {
-            LOGGER.log(Level.WARNING, "Is {0} a ghost?", msg.RECIPIENT);
-            return;
-        }
-        if (clientName.equals("CS-Client")) {
-            clientName = msg.RECIPIENT;
-        }
-        for (Client client : clients) {
-            if (client.localname.equals(clientName)) {
-                client.sendMsg(msg, false);
-            }
-        }
-    }
-
-    private synchronized void out(CommandMessage msg, Client sender) {
-        if (sender != null && !sender.auth) {
-            return;
-        }
-        for (Client client : clients) {
-            if (client.type == ClientType.PLUGIN
-                    && client.name.equalsIgnoreCase(msg.TARGET)) {
-                client.sendMsg(msg, false);
-                if (sender != null) {
-                    sender.sendMsg(new PlayerMessage(COLOR_CHAR + "a" + msg
-                            + " sent!", msg.SENDER), false);
-                }
-                return;
-            }
-        }
-        if (sender != null) {
-            sender.sendMsg(new PlayerMessage(COLOR_CHAR + "cServer " + COLOR_CHAR
-                    + "9" + msg.TARGET + COLOR_CHAR + "c not found.", msg.SENDER),
-                    false);
-        }
-    }
-
-    private synchronized Client getClient(String name) {
+    protected Client getClient(String name) {
         for (Client client : clients) {
             if (client.localname.equals(name)) {
                 return client;
@@ -370,330 +385,34 @@ public final class ConvoSyncServer {
         return null;
     }
 
-    private static enum ClientType {
-
-        PLUGIN, APPLICATION
-    }
-
-    private class Client implements Runnable {
-
-        private Socket socket;
-        private ClientType type;
-        private ObjectOutputStream out;
-        private ObjectInputStream in;
-        private boolean alive = true, auth = false, enabled = true;
-        private String name, localname, version;
-
-        private Client(Socket socket) throws IOException {
-            super();
-            this.socket = socket;
-            out = new ObjectOutputStream(socket.getOutputStream());
-            in = new ObjectInputStream(socket.getInputStream());
-        }
-
-        @Override
-        public void run() {
-            Object input;
-            while (alive) {
-                try {
-                    input = in.readObject();
-                    LOGGER.log(Level.FINER, "Input: {0}", input);
-                    if (input instanceof Message) {
-                        processMessage((Message) input);
-                    } else {
-                        LOGGER.log(Level.WARNING, "{0} isn't a message!", input);
-                    }
-                } catch (IOException ex) {
-                    if (!socket.isClosed()) {
-                        try {
-                            completelyClose(false, DisconnectMessage.Reason.CRASHED);
-                        } catch (IOException ex2) {
-                            LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
-                        }
-                    }
-                } catch (ClassNotFoundException ex) {
-                    LOGGER.log(Level.SEVERE, "Fatal error in client " + localname, ex);
-                    try {
-                        completelyClose(false, DisconnectMessage.Reason.CRASHED);
-                    } catch (IOException ex2) {
-                        LOGGER.log(Level.WARNING, "Error disconnecting client " + localname, ex2);
-                    }
-                }
-            }
-        }
-
-        private synchronized void processMessage(Message msg) throws IOException {
-            if (msg instanceof PrivateMessage) {
-                out((PrivateMessage) msg, this);
-                return;
-            }
-            if (msg instanceof PlayerMessage) {
-                out((PlayerMessage) msg, this);
-                return;
-            }
-            if (msg instanceof ChatMessage) {
-                if (prefix || type == ClientType.APPLICATION) {
-                    if (chatColor == '\u0000') {
-                        out("[" + name + "] " + ((ChatMessage) msg).MSG, this);
-                    } else {
-                        out("[" + COLOR_CHAR + chatColor
-                                + name + COLOR_CHAR + "f] " + ((ChatMessage) msg).MSG, this);
-                    }
-                } else {
-                    out((ChatMessage) msg, this);
-                }
-                return;
-            }
-            if (msg instanceof CommandMessage) {
-                if (type == ClientType.APPLICATION) {
-                    if (getUser(name).op) {
-                        out((CommandMessage) msg, this);
-                    } else {
-                        sendMsg(new PlayerMessage(
-                                "You don't have permission to use cross-server commands.",
-                                name), false);
-                    }
-                } else {
-                    out((CommandMessage) msg, this);
-                }
-                return;
-            }
-            if (msg instanceof PlayerListMessage) {
-                PlayerListMessage list = (PlayerListMessage) msg;
-                if (list.JOIN) {
-                    for (String element : list.LIST) {
-                        if (userMap.get(element) != null) {
-                            out(new PlayerMessage(
-                                    "You cannot be logged into the client and the game simultaneously.",
-                                    element), this);
-                            Client client = getClient(element);
-                            if (client == null) {
-                                LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                        + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
-                                        element);
-                            } else {
-                                client.close(true, true, DisconnectMessage.Reason.KICKED);
-                                clients.remove(client);
-                            }
-                        }
-                        userMap.put(element, localname);
-                    }
-                } else {
-                    for (String element : list.LIST) {
-                        userMap.remove(element);
-                    }
-                }
-                sendPlayerListUpdate();
-                return;
-            }
-            if (msg instanceof PluginAuthenticationRequest) {
-                PluginAuthenticationRequest authReq = (PluginAuthenticationRequest) msg;
-                name = authReq.NAME;
-                localname = format(name);
-                type = ClientType.PLUGIN;
-                version = authReq.VERSION;
-                if (!Main.VERSION.equals(version)) {
-                    LOGGER.log(Level.WARNING,
-                            "Version mismatch: Local version {0}, {1} version {2}",
-                            new Object[]{Main.VERSION, localname, version});
-                }
-                auth = authReq.PASSWORD.equals(pluginPassword);
-                sendMsg(new AuthenticationRequestResponse(auth,
-                        AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
-                        Main.VERSION), true);
-                for (String element : authReq.PLAYERS) {
-                    if (userMap.get(element) != null) {
-                        Client client = getClient(element);
-                        if (client == null) {
-                            LOGGER.log(Level.WARNING, "{0} is already logged on, but their client cannot be found."
-                                    + "\nAre they logged onto two Minecraft servers connected to this ConvoSync Server?",
-                                    element);
-                        } else {
-                            out(new PlayerMessage(
-                                    "You cannot be logged into the client and the game simultaneously.",
-                                    element), this);
-                            client.close(true, true, DisconnectMessage.Reason.KICKED);
-                        }
-                    }
-                    userMap.put(element, localname);
-                }
-                out(name + " has connected.", this);
-                sendPlayerListUpdate();
-                return;
-            }
-            if (msg instanceof ApplicationAuthenticationRequest) {
-                type = ClientType.APPLICATION;
-                AuthenticationRequestResponse.Reason reason = null;
-                ApplicationAuthenticationRequest authReq = (ApplicationAuthenticationRequest) msg;
-                version = authReq.VERSION;
-                if (!Main.VERSION.equals(version)) {
-                    LOGGER.log(Level.WARNING, "Version mismatch: Local version {0}, {1} version {2}", new Object[]{Main.VERSION, authReq.NAME, version});
-                }
-                User user = getUser(authReq.NAME);
-                if (user == null) {
-                    reason = AuthenticationRequestResponse.Reason.INVALID_USER;
-                } else {
-                    if (authReq.PASSWORD.equals(user.PASSWORD)) {
-                        if (banlist.contains(authReq.NAME)) {
-                            reason = AuthenticationRequestResponse.Reason.BANNED;
-                        } else {
-                            if (userMap.get(authReq.NAME) == null) {
-                                auth = true;
-                            } else {
-                                reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
-                            }
-                        }
-                    } else {
-                        reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
-                    }
-                }
-                sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
-                if (auth) {
-                    localname = (name = authReq.NAME);
-                    sendMsg(new PlayerListUpdate(
-                            userMap.keySet().toArray(
-                            new String[userMap.keySet().size()])), false);
-                    out(name + " has joined.", this);
-                    userMap.put(name, "CS-Client");
-                    sendPlayerListUpdate();
-                }
-                return;
-            }
-            if (msg instanceof PlayerVanishMessage) {
-                PlayerVanishMessage vmsg = (PlayerVanishMessage) msg;
-                if (vmsg.VANISH) {
-                    vanishPlayer(vmsg.PLAYER);
-                } else {
-                    sendPlayerListUpdate();
-                }
-                return;
-            }
-            if (msg instanceof SetEnabledProperty) {
-                enabled = ((SetEnabledProperty) msg).ENABLED;
-                out(name + " has " + (enabled ? "enabled" : "disabled")
-                        + " cross-server chat due to " + (enabled ? "reduced" : "high")
-                        + " player count.", this);
-                if (!enabled) {
-                    out("This doesn't affect cross-server private messages or commands.", this);
-                }
-                return;
-            }
-            if (msg instanceof UserRegistration) {
-                UserRegistration reg = (UserRegistration) msg;
-                if (isUserRegistered(reg.USER)) {
-                    users.remove(getUser(reg.USER));
-                }
-                users.add(new User(reg));
-                sendMsg(new PlayerMessage(COLOR_CHAR + "aYou've successfully registered.", reg.USER), false);
-                return;
-            }
-            if (msg instanceof UserPropertyChange) {
-                UserPropertyChange prop = (UserPropertyChange) msg;
-                switch (prop.PROPERTY) {
-                    case PASSWORD:
-                        users.remove(getUser(name));
-                        users.add(new User(new UserRegistration(name, prop.VALUE)));
-                        sendMsg(new PlayerMessage("Password changed.", name), false);
-                        break;
-                }
-                return;
-            }
-            if (msg instanceof UserListRequest) {
-                String sender = ((UserListRequest) msg).SENDER;
-                sendMsg(new PlayerMessage(COLOR_CHAR + "aAll known online users:", sender), false);
-                for (String user : userMap.keySet()) {
-                    sendMsg(new PlayerMessage(COLOR_CHAR + "a" + user + " on server " + userMap.get(user), sender), false);
-                }
-                return;
-            }
-            if (msg instanceof DisconnectMessage) {
-                try {
-                    completelyClose(false, null);
-                } catch (ConcurrentModificationException ex) {
-                    LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
-                }
-                try {
-                    out(name + " has disconnected.", this);
-                } catch (ConcurrentModificationException ex) {
-                    LOGGER.log(Level.SEVERE, "Uh-oh! This is bad! : {0}", ex.toString());
-                }
-            }
-        }
-
-        private void sendMsg(String s, boolean override) {
-            if (enabled || override) {
-                sendMsg(new ChatMessage(s, false));
-            }
-        }
-
-        private void sendMsg(Object obj, boolean override) {
-            if (enabled || override) {
-                sendMsg(obj);
-            }
-        }
-
-        private void sendMsg(Object obj) {
-            if (!alive) {
-                LOGGER.log(Level.WARNING, "Tried to write to a dead client: {0}", localname);
-                return;
-            }
-            try {
-                out.writeObject(obj);
-                out.flush();
-                LOGGER.log(Level.FINER, "{0} sent to {1}!", new Object[]{obj, localname});
-            } catch (IOException ex) {
-                if (!socket.isClosed()) {
-                    LOGGER.log(Level.SEVERE, "Could not write object {0} to client {1} : {2}", new Object[]{obj, localname, ex.toString()});
-                }
-            }
-        }
-
-        private void close(boolean kick, boolean msg, DisconnectMessage.Reason reason) throws IOException {
-            if (msg) {
-                sendMsg(new DisconnectMessage(reason), true);
-            }
-            alive = false;
-            socket.close();
-            if (kick) {
-                out(name + " has been kicked.", this);
-            }
-            if (type == ClientType.PLUGIN) {
-                userMap.values().removeAll(Collections.singleton(localname));
-            } else {
-                userMap.remove(name);
-            }
-            sendPlayerListUpdate();
-        }
-
-        private synchronized void completelyClose(boolean msg, DisconnectMessage.Reason reason) throws IOException {
-            clients.remove(this);
-            close(false, msg, reason);
-        }
-
-        @Override
-        public String toString() {
-            return "Client[" + localname + "," + version + "," + socket + "]";
-        }
-    }
-
     @Override
     public String toString() {
         return "ConvoSyncServer " + Main.VERSION;
     }
 
-    private void dispatchCommand(Command cmd, String[] args) {
+    /**
+     * Used to dispatch commands. dispatchCommand(Command.USERS, new
+     * String[]{"list"}) would be equivalent to dispatchSubComand(Command.LIST,
+     * new String[0]). Currently, only the USERS command has sub-commands.
+     *
+     * @param cmd  the Command to dispatch
+     * @param args the Command arguments
+     */
+    public void dispatchCommand(Command cmd, String[] args) {
         LOGGER.log(Level.INFO, "Executing command {0}", cmd);
         switch (cmd) {
             case EXIT:
             case STOP:
+                instances.remove(this);
                 open = false;
+                // save user data
                 File decrypted = null;
                 try {
                     ObjectOutputStream oos = null;
                     try {
                         decrypted = new File("users.sav");
                         oos = new ObjectOutputStream(new FileOutputStream(decrypted));
-                        oos.writeObject(users.toArray(new User[users.size()]));
+                        oos.writeObject(users.values().toArray(new User[users.size()]));
                     } finally {
                         if (oos != null) {
                             oos.close();
@@ -701,7 +420,10 @@ public final class ConvoSyncServer {
                     }
                     if (cipher != null) {
                         cipher.encrypt(decrypted, new File("users.sav.dat"),
-                                new File("key.dat"));
+                                       new File("key.dat"));
+                    } else {
+                        LOGGER.log(Level.WARNING, "Cipher missing; couldn't encrypt user data.");
+                        LOGGER.log(Level.WARNING, "User data will be lost.");
                     }
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error saving user data.", ex);
@@ -716,6 +438,7 @@ public final class ConvoSyncServer {
                         decrypted.delete();
                     }
                 }
+                // save ban list
                 try {
                     PrintWriter pw = null;
                     try {
@@ -728,34 +451,48 @@ public final class ConvoSyncServer {
                             pw.close();
                         }
                     }
-                } catch (IOException ex) {
-                    LOGGER.log(Level.SEVERE, "Error saving ban list.", ex);
+                } catch (FileNotFoundException ex) {
+                    // ignore
                 }
+                // save config
                 try {
                     Properties p = new Properties();
-                    FileOutputStream fos = new FileOutputStream(new File("CS-Server.properties"));
-                    p.setProperty("chat-color", String.valueOf(chatColor));
-                    p.setProperty("use-prefixes", String.valueOf(prefix));
+                    FileOutputStream fos = new FileOutputStream(new File("config.properties"));
+                    p.setProperty("chat-color",
+                                  chatColor == '\u0000' ? "" : String.valueOf(chatColor));
+                    p.setProperty("use-prefixes", String.valueOf(usePrefix));
                     p.store(fos, null);
                     fos.close();
                 } catch (IOException ex) {
                     LOGGER.log(Level.WARNING, "Error saving config.", ex);
                 }
                 try {
+                    /*
+                     * Close the server. If the force argument is included,
+                     * force close the server. If the restart argument is
+                     * included, indicate that the server will be back soon. You
+                     * cannot include both arguments, so both are args[0].
+                     */
                     close(args != null && args.length > 0
-                            && args[0].equalsIgnoreCase("force"),
-                            DisconnectMessage.Reason.RESTARTING);
+                          && args[0].equalsIgnoreCase("force"),
+                          args != null && args.length > 0
+                          && args[0].equalsIgnoreCase("restart")
+                          ? DisconnectMessage.Reason.RESTARTING
+                          : DisconnectMessage.Reason.CLOSING);
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, "Error closing!", ex);
+                    LOGGER.log(Level.SEVERE,
+                               "If the server doesn't close, try the command: stop force");
                 }
                 break;
             case RESTART:
-                dispatchCommand(Command.EXIT, null);
-                try {
-                    new ConvoSyncServer().run(args.length == 0 ? startupArgs : args);
-                } catch (IOException ex) {
-                    LOGGER.log(Level.SEVERE, "Error restarting server.", ex);
-                }
+                // exit the current server and indicate that it is restarting
+                dispatchCommand(Command.EXIT, new String[]{"restart"});
+                ConvoSyncServer server = new ConvoSyncServer();
+                // preserve debug mode from last server
+                server.debug = debug;
+                // re-use the server arguments, if there were any
+                server.run(args.length == 0 ? startupArgs : args);
                 break;
             case RECONNECT:
                 try {
@@ -765,15 +502,15 @@ public final class ConvoSyncServer {
                 }
                 break;
             case SETCOLOR:
-                LOGGER.log(Level.INFO, "Chat Color Code: {0}", args.length > 0
-                        && args[0].length() > 0 ? chatColor = args[0].charAt(0)
-                        : chatColor);
+                LOGGER.log(Level.INFO,
+                           "Chat Color Code: {0}", args.length > 0 && args[0].length() > 0
+                                                   ? chatColor = args[0].charAt(0)
+                                                   : chatColor);
                 break;
             case SETUSEPREFIX:
-                if (args.length > 0) {
-                    prefix = Boolean.parseBoolean(args[0]);
-                }
-                LOGGER.log(Level.INFO, "Use Prefix: {0}", prefix);
+                LOGGER.log(Level.INFO, "Use Prefix: {0}", args.length > 0
+                                                          ? usePrefix = Boolean.parseBoolean(args[0])
+                                                          : usePrefix);
                 break;
             case KICK:
                 if (args.length < 1) {
@@ -784,19 +521,21 @@ public final class ConvoSyncServer {
                 try {
                     id = Integer.parseInt(args[0]);
                 } catch (NumberFormatException ex) {
-                    LOGGER.log(Level.INFO, "You did not enter a valid number.");
+                    LOGGER.log(Level.INFO, "{0} is not a valid number.", args[0]);
                     break;
                 }
                 boolean found = false;
                 for (Client client : clients) {
                     if (client.socket.getPort() == id) {
                         found = true;
-                        LOGGER.log(Level.INFO, "Closing {0}", client);
+                        LOGGER.log(Level.INFO, "Closing {0}...", client.localname);
                         try {
-                            client.completelyClose(true, DisconnectMessage.Reason.KICKED);
-                            LOGGER.log(Level.INFO, "Client closed.");
+                            client.close(true, true, true,
+                                         DisconnectMessage.Reason.KICKED);
+                            LOGGER.log(Level.INFO, "Client {0} closed.", client.localname);
                         } catch (IOException ex) {
-                            LOGGER.log(Level.SEVERE, "Error closing " + client, ex);
+                            LOGGER.log(Level.SEVERE, "Error closing {0}: {1}",
+                                       new Object[]{client.localname, ex});
                         }
                         break;
                     }
@@ -810,9 +549,9 @@ public final class ConvoSyncServer {
                     LOGGER.log(Level.INFO, "There are currently no connected clients.");
                 } else {
                     LOGGER.log(Level.INFO, "All connected clients ({0}):",
-                            clients.size());
+                               clients.size());
                     for (Client client : clients) {
-                        LOGGER.log(Level.INFO, "{0}", client);
+                        LOGGER.log(Level.INFO, client.toString());
                     }
                 }
                 break;
@@ -821,94 +560,40 @@ public final class ConvoSyncServer {
                     LOGGER.log(Level.INFO, "/users <list|op|unregister>");
                     break;
                 }
-                SubCommand subcmd;
+                SubCommand subCmd;
                 try {
-                    subcmd = SubCommand.valueOf(args[0].toUpperCase());
+                    subCmd = SubCommand.valueOf(args[0].toUpperCase());
                 } catch (IllegalArgumentException ex) {
                     LOGGER.log(Level.INFO, "/users <list|op|unregister>");
                     break;
                 }
-                LOGGER.log(Level.INFO, "Executing sub-command {0}", subcmd);
-                switch (subcmd) {
-                    case LIST:
-                        if (userMap.isEmpty()) {
-                            LOGGER.log(Level.INFO, "No known online users.");
-                        } else {
-                            LOGGER.log(Level.INFO, "All known online users ({0}):",
-                                    userMap.size());
-                            for (String key : userMap.keySet()) {
-                                LOGGER.log(Level.INFO, "User {0} on server {1}",
-                                        new String[]{key, userMap.get(key)});
-                            }
-                        }
-                        if (users.isEmpty()) {
-                            LOGGER.log(Level.INFO, "No registered client users.");
-                        } else {
-                            LOGGER.log(Level.INFO, "All registered client users ({0}):",
-                                    users.size());
-                            for (User user : users) {
-                                LOGGER.log(Level.INFO, "User: {0} OP: {1}",
-                                        new Object[]{user.NAME, user.op});
-                            }
-                        }
-                        break;
-                    case OP:
-                        if (args.length < 1) {
-                            LOGGER.log(Level.INFO, "/users op <user name> [true|false]");
-                            break;
-                        }
-                        if (!isUserRegistered(args[1])) {
-                            LOGGER.log(Level.INFO, "Invalid user name.");
-                            break;
-                        }
-                        User user = getUser(args[1]);
-                        LOGGER.log(Level.INFO, (user.op = (args.length > 2
-                                ? Boolean.parseBoolean(args[2]) : !user.op))
-                                ? "{0} is now OP." : "{0} is no longer OP.",
-                                user.NAME);
-                        break;
-                    case UNREGISTER:
-                        if (args.length < 1) {
-                            LOGGER.log(Level.INFO, "/users unregister <user name>");
-                            break;
-                        }
-                        Client client = getClient(args[1]);
-                        if (client != null) {
-                            try {
-                                client.close(true, true, DisconnectMessage.Reason.KICKED);
-                            } catch (IOException ex) {
-                                LOGGER.log(Level.INFO, "Error closing client.", ex);
-                            }
-                        }
-                        users.remove(getUser(args[1]));
-                        LOGGER.log(Level.INFO, "{0} unregistered.", args[1]);
-                        break;
-                }
+                // drop the first argument (it was the sub-command)
+                dispatchSubCommand(subCmd, Arrays.copyOfRange(args, 1, args.length));
                 break;
             case NAME:
                 LOGGER.log(Level.INFO, "Name: {0}", args.length > 0
-                        ? name = args[0] : name);
+                                                    ? name = args[0] : name);
                 break;
             case HELP:
                 LOGGER.log(Level.INFO, "Commands:\n"
-                        + "/exit [force]              - Closes the socket and exits the program.\n"
-                        + "/stop [force]              - Same as /exit.\n"
-                        + "/restart                   - Completely restarts the server.\n"
-                        + "/reconnect                 - Closes the socket and then reopens it.\n"
-                        + "/setcolor [color code]     - Sets the color code used for server & client name prefixes.\n"
-                        + "/setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
-                        + "/kick <port>               - Closes the socket on the specified port.\n"
-                        + "/list                      - Lists all connected clients.\n"
-                        + "/users <list|op|unregister>- Used to manage client users.\n"
-                        + "/name [name]               - Sets your name to the given name.\n"
-                        + "/help                      - Prints all commands.\n"
-                        + "/debug                     - Toggles debug mode.\n"
-                        + "/version                   - Displays version info.\n"
-                        + "/config                    - Generates the server config properties.");
+                                       + "/exit [force]              - Closes the socket and exits the program.\n"
+                                       + "/stop [force]              - Same as /exit.\n"
+                                       + "/restart                   - Completely restarts the server.\n"
+                                       + "/reconnect                 - Closes the socket and then reopens it.\n"
+                                       + "/setcolor [color code]     - Sets the color code used for server & client name prefixes.\n"
+                                       + "/setuseprefix [true|false] - Determines whether or not server name prefixes are included in chat.\n"
+                                       + "/kick <port>               - Closes the socket on the specified port.\n"
+                                       + "/list                      - Lists all connected clients.\n"
+                                       + "/users <list|op|unregister>- Used to manage client users.\n"
+                                       + "/name [name]               - Sets your name to the given name.\n"
+                                       + "/help                      - Prints all commands.\n"
+                                       + "/debug                     - Toggles debug mode.\n"
+                                       + "/version                   - Displays version info.\n"
+                                       + "/config                    - Generates the server config properties.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
-                        : "Debug mode disabled.");
+                                       : "Debug mode disabled.");
                 if (debug) {
                     consoleHandler.setLevel(Level.FINEST);
                     fileHandler.setLevel(Level.FINEST);
@@ -930,7 +615,7 @@ public final class ConvoSyncServer {
                 FileOutputStream fos = null;
                 try {
                     try {
-                        fos = new FileOutputStream("CS-Server.properties");
+                        fos = new FileOutputStream("connection.properties");
                         p.store(fos, null);
                         LOGGER.log(Level.INFO, "Config generated.");
                     } finally {
@@ -939,40 +624,138 @@ public final class ConvoSyncServer {
                         }
                     }
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "Could not generate config: {0}", ex.toString());
+                    LOGGER.log(Level.WARNING, "Could not generate config: {0}",
+                               ex.toString());
                 }
                 break;
         }
     }
 
-    private static class User implements Serializable {
-
-        private static final long serialVersionUID = 7526472295622776147L;
-        private final String NAME, PASSWORD;
-        private boolean op;
-
-        public User(UserRegistration reg) {
-            this.NAME = reg.USER;
-            this.PASSWORD = reg.PASSWORD;
+    /**
+     * Used to dispatch sub-commands. dispatchCommand(Command.USERS, new
+     * String[]{"list"}) would be equivalent to dispatchSubComand(Command.LIST,
+     * new String[0]). Currently, only the USERS command has sub-commands.
+     *
+     * @param subCmd the SubCommand to dispatch
+     * @param args   the SubCommand arguments
+     */
+    public void dispatchSubCommand(SubCommand subCmd, String[] args) {
+        LOGGER.log(Level.INFO, "Executing sub-command {0}", subCmd);
+        switch (subCmd) {
+            case LIST:
+                if (userMap.isEmpty()) {
+                    LOGGER.log(Level.INFO, "No known online users.");
+                } else {
+                    LOGGER.log(Level.INFO,
+                               "All known online users ({0}):",
+                               userMap.size());
+                    for (String key : userMap.keySet()) {
+                        LOGGER.log(Level.INFO, "User {0} on server {1}",
+                                   new String[]{key, userMap.get(key)});
+                    }
+                }
+                if (users.isEmpty()) {
+                    LOGGER.log(Level.INFO, "No registered client users.");
+                } else {
+                    LOGGER.log(Level.INFO,
+                               "All registered client users ({0}):",
+                               users.size());
+                    for (User user : users.values()) {
+                        LOGGER.log(Level.INFO, "User: {0} OP: {1}",
+                                   new Object[]{user.NAME, user.op});
+                    }
+                }
+                break;
+            case OP:
+                if (args.length < 0) {
+                    LOGGER.log(Level.INFO, "/users op <user name> [true|false]");
+                    break;
+                }
+                if (!users.containsKey(args[0])) {
+                    LOGGER.log(Level.INFO, "No such user: {0}", args[0]);
+                    break;
+                }
+                User user = users.get(args[0]);
+                LOGGER.log(Level.INFO, (user.op = (args.length > 1
+                                                   ? Boolean.parseBoolean(args[1])
+                                                   : !user.op))
+                                       ? "{0} is now OP." : "{0} is no longer OP.",
+                           user.NAME);
+                break;
+            case UNREGISTER:
+                if (args.length < 0) {
+                    LOGGER.log(Level.INFO, "/users unregister <user name>");
+                    break;
+                }
+                user = users.get(args[0]);
+                if (user != null) {
+                    Client client = getClient(args[0]);
+                    if (client != null) {
+                        try {
+                            client.close(true, true, true,
+                                         new DisconnectMessage(DisconnectMessage.Reason.KICKED));
+                        } catch (IOException ex) {
+                            LOGGER.log(Level.WARNING, "Error closing {0} : {1}",
+                                       new Object[]{client.localname, ex});
+                        }
+                    }
+                    users.remove(user.NAME);
+                    LOGGER.log(Level.INFO, "{0} unregistered.", args[0]);
+                } else {
+                    LOGGER.log(Level.INFO, "No such user: {0}", args[0]);
+                }
+                break;
         }
     }
 
-    private boolean isUserRegistered(String name) {
-        for (User user : users) {
-            if (user.NAME.equals(name)) {
-                return true;
-            }
-        }
+    public boolean isOpen() {
+        return open;
+    }
+
+    public char getChatColor() {
+        return chatColor;
+    }
+
+    public boolean isUsingPrefixes() {
+        return usePrefix;
+    }
+
+    /**
+     *
+     * @return true if debug mode is enabled
+     */
+    public boolean isDebug() {
+        return debug;
+    }
+
+    /**
+     *
+     * @return the port the server is listening on
+     */
+    public int getPort() {
+        return port;
+    }
+
+    public void sendCustomMessage(CustomMessage msg) {
+        // not yet supported
+        //sendCustomMessage(msg, null);
+    }
+
+    public void sendCustomMessage(CustomMessage msg, Client sender) {
+        // not yet supported
+        //messenger.out(msg, sender);
+    }
+
+    public boolean addMessageHandler(MessageHandler handler) {
+        // not yet supported
+        //return messenger.addMessageHandler(handler);
         return false;
     }
 
-    private User getUser(String name) {
-        for (User user : users) {
-            if (user.NAME.equals(name)) {
-                return user;
-            }
-        }
-        return null;
+    public boolean addMessageFilter(MessageFilter filter) {
+        // not yet supported
+        //return messenger.addMessageFilter(filter);
+        return false;
     }
 
     private class InputTask implements Runnable {
@@ -980,33 +763,36 @@ public final class ConvoSyncServer {
         @Override
         public void run() {
             String input;
-            while (open || alive()) {
+            while (open || !clients.isEmpty()) {
                 try {
                     input = in.nextLine();
                     if (input != null && input.length() > 0) {
                         if (input.charAt(0) == '/') {
+                            // command
+                            input = input.substring(1);
                             int delim = input.indexOf(" ");
                             Command cmd;
+                            String value = (delim > 0
+                                            ? input.substring(0, delim)
+                                            : input).toUpperCase();
                             try {
-                                cmd = Command.valueOf((delim > 0
-                                        ? input.substring(0, delim)
-                                        : input).substring(1).toUpperCase());
+                                cmd = Command.valueOf(value);
                             } catch (IllegalArgumentException ex) {
-                                cmd = Command.HELP;
+                                LOGGER.log(Level.INFO, "No such command {0}; enter /help for help.", value);
+                                continue;
                             }
                             String[] args = delim > 0
-                                    ? input.substring(delim + 1).split(" ")
-                                    : new String[0];
+                                            ? input.substring(delim + 1).split(" ")
+                                            : new String[0];
                             dispatchCommand(cmd, args);
                         } else {
-                            out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
+                            // chat
+                            messenger.out("<" + COLOR_CHAR + "5" + name + COLOR_CHAR + "f> " + input, null);
                         }
                     }
                 } catch (NoSuchElementException ex) {
                     LOGGER.log(Level.WARNING, "Input terminated.");
                     in = new Scanner(System.in);
-                } catch (Exception ex) {
-                    LOGGER.log(Level.SEVERE, "Error in input Thread!", ex);
                 }
             }
         }
@@ -1021,14 +807,12 @@ public final class ConvoSyncServer {
             while (open) {
                 try {
                     clientSocket = socket.accept();
-                    client = new Client(clientSocket);
-                    synchronized (clients) {
-                        clients.add(client);
-                    }
+                    client = new Client(clientSocket, ConvoSyncServer.this, messenger);
+                    messenger.newClients.add(client);
                     new Thread(client).start();
-                    LOGGER.log(Level.FINE, "Accepted a connection: {0}", client);
+                    LOGGER.log(Level.FINE, "Accepted a connection: {0}", clientSocket);
                 } catch (IOException ex) {
-                    // ignore
+                    LOGGER.log(Level.FINER, "Error accepting a connection: {0}", ex.toString());
                 }
             }
         }
