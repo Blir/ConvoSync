@@ -38,10 +38,10 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     private ObjectOutputStream out;
     private Socket socket;
     protected boolean connected, shouldBe = true, auth, isEss;
-    private List<ChatListener> listeners = new ArrayList<ChatListener>();
-    private List<User> users = new ArrayList<User>();
+    private final List<ChatListener> listeners = new LinkedList<ChatListener>();
+    private final Map<String, User> users = new HashMap<String, User>();
     private EssentialsTask essTask;
-    private Map<String, String> lastPM = new HashMap<String, String>();
+    private final Map<String, String> lastPM = new HashMap<String, String>();
 
     /**
      *
@@ -50,7 +50,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     public int getPort() {
         return port;
     }
-    
+
     /**
      *
      * @return the IP the plugin is connected to
@@ -58,7 +58,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     public String getIP() {
         return ip;
     }
-    
+
     @Override
     public void onEnable() {
         try {
@@ -303,8 +303,8 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                 return true;
             }
             StringBuilder sb = new StringBuilder();
-            for (int idx = 0; idx < args.length; idx++) {
-                sb.append(" ").append(args[idx]);
+            for (String arg : args) {
+                sb.append(" ").append(arg);
             }
             out(to, sender.getName(), sb.toString().substring(1));
             return true;
@@ -357,9 +357,14 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             return false;
         } else if (cmd.getName().equals("togglecs")) {
             if (sender instanceof Player) {
+                User user = users.get(sender.getName());
+                if (user == null) {
+                    user = new User(sender.getName());
+                    users.put(user.name, user);
+                }
                 sender.sendMessage(ChatColor.GREEN + "Cross-server chat "
                                    + ChatColor.BLUE
-                                   + (getUser(sender.getName()).toggle() ? "enabled" : "disabled")
+                                   + (user.toggle() ? "enabled" : "disabled")
                                    + ChatColor.GREEN + ".");
             } else {
                 sender.sendMessage(ChatColor.RED
@@ -394,7 +399,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onAsyncPlayerChat(AsyncPlayerChatEvent evt) {
-        if (!evt.isCancelled() && getUser(evt.getPlayer().getName()).enabled) {
+        User user = users.get(evt.getPlayer().getName());
+        if (user == null) {
+            user = new User(evt.getPlayer().getName());
+            users.put(user.name, user);
+        }
+        if (!evt.isCancelled() && user.enabled) {
             out(evt.getFormat().replace("%1$s", evt.getPlayer().getDisplayName())
                     .replace("%2$s", evt.getMessage()), false);
         }
@@ -408,7 +418,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                                          + "Cross-server chat is now disabled due to high player count.");
             out(new SetEnabledProperty(false), false);
         }
-        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
+        User user = users.get(evt.getPlayer().getName());
+        if (user == null) {
+            user = new User(evt.getPlayer().getName());
+            users.put(user.name, user);
+        }
+        if (user.enabled && ((isEss && essTask.canChat(evt.getPlayer())) || !isEss)) {
             out(evt.getJoinMessage(), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), true), false);
@@ -439,11 +454,16 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             out(new SetEnabledProperty(true), false);
         }
         out(new PlayerListMessage(evt.getPlayer().getName(), false), false);
-        if (getUser(evt.getPlayer().getName()).enabled && ((isEss && essTask.chat(evt.getPlayer())) || !isEss)) {
+        User user = users.get(evt.getPlayer().getName());
+        if (user == null) {
+            user = new User(evt.getPlayer().getName());
+            users.put(user.name, user);
+        }
+        if (user.enabled && ((isEss && essTask.canChat(evt.getPlayer())) || !isEss)) {
             out(evt.getQuitMessage(), false);
         }
         if (essTask != null) {
-            essTask.remove(evt.getPlayer().getName());
+            essTask.users.remove(evt.getPlayer().getName());
         }
     }
 
@@ -538,17 +558,6 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         sender.sendMessage(ChatColor.GREEN + "Essentials status: " + ChatColor.BLUE + isEss);
     }
 
-    private User getUser(String name) {
-        for (User user : users) {
-            if (user.name.equals(name)) {
-                return user;
-            }
-        }
-        User user = new User(name);
-        users.add(user);
-        return user;
-    }
-
     private static class User {
 
         private String name;
@@ -564,8 +573,8 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     }
 
     /**
-     * Adds a ChatListener. ChatListeners listen to cross-server chat.
-     * 
+     * Adds a ChatListener. ChatListeners listen to cross-server canChat.
+     *
      * @param listener the ChatListener to add
      * @return true if the ChatListener was added
      */
@@ -574,23 +583,23 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     }
 
     /**
-     * Used to listen to cross-server chat.
+     * Used to listen to cross-server canChat.
      */
     public interface ChatListener {
 
         /**
-         * Called when cross-server chat occurs.
-         * 
-         * @param msg the chat that occurred
+         * Called when cross-server canChat occurs.
+         *
+         * @param msg the canChat that occurred
          */
         public void onInput(String msg);
     }
 
     /**
-     * Sends cross-server chat.
-     * 
-     * @param s the chat to send
-     * @return true if the chat was sent
+     * Sends cross-server canChat.
+     *
+     * @param s the canChat to send
+     * @return true if the canChat was sent
      */
     public boolean chat(String s) {
         return out(s, false);
@@ -648,7 +657,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                 getServer().broadcastMessage(chatMsg.MSG);
             } else {
                 for (Player player : getServer().getOnlinePlayers()) {
-                    if (getUser(player.getName()).enabled) {
+                    User user = users.get(player.getName());
+                    if (user == null) {
+                        user = new User(player.getName());
+                        users.put(user.name, user);
+                    }
+                    if (user.enabled) {
                         player.sendMessage(chatMsg.MSG);
                     }
                 }

@@ -11,10 +11,16 @@ import java.awt.Cursor;
  */
 public class LoginGUI extends javax.swing.JFrame {
 
-    private ConvoSyncClient client;
+    private final ConvoSyncClient client;
 
     /**
      * Creates new form LoginGUI
+     * @param client
+     * @param ip
+     * @param port
+     * @param user
+     * @param password
+     * @param remember
      */
     protected LoginGUI(ConvoSyncClient client, String ip, int port, String user,
                        String password, boolean remember) {

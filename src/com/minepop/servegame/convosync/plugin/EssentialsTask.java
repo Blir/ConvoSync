@@ -1,9 +1,10 @@
 package com.minepop.servegame.convosync.plugin;
 
 import com.earth2me.essentials.Essentials;
+import com.earth2me.essentials.User;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
@@ -11,14 +12,15 @@ import org.bukkit.plugin.Plugin;
 
 /**
  * Handles cross-server AFK notifications.
- * 
+ *
  * @author Blir
  */
 public class EssentialsTask implements Runnable {
 
-    private ConvoSync plugin;
+    private final ConvoSync plugin;
     private Essentials ess;
-    private List<User> users = new ArrayList<User>();
+    //private final List<ConvoSyncUser> users = new LinkedList<ConvoSyncUser>();
+    protected final Map<String, ConvoSyncUser> users = new HashMap<String, ConvoSyncUser>();
 
     protected EssentialsTask(ConvoSync plugin) {
         this.plugin = plugin;
@@ -34,10 +36,10 @@ public class EssentialsTask implements Runnable {
         if (plugin.isEss) {
             plugin.getLogger().info("Essentials Task started!");
         }
-        while (plugin.connected && plugin.isEss && plugin.isEnabled()) {
+        while (plugin.connected && plugin.isEss && plugin.isEnabled() && ess.isEnabled()) {
             for (Player player : plugin.getServer().getOnlinePlayers()) {
-                com.earth2me.essentials.User user = ess.getUser(player);
-                User csuser = getUser(user);
+                User user = ess.getUser(player);
+                ConvoSyncUser csuser = getUser(user);
                 if (user.isAfk() != csuser.afk) {
                     csuser.afk = user.isAfk();
                     if (!user.isVanished()) {
@@ -55,39 +57,24 @@ public class EssentialsTask implements Runnable {
         }
     }
 
-    private User getUser(com.earth2me.essentials.User user) {
-        for (User ctuser : users) {
-            if (ctuser.name.equals(user.getName())) {
-                return ctuser;
-            }
+    private ConvoSyncUser getUser(User user) {
+        ConvoSyncUser csuser = users.get(user.getName());
+        if (csuser == null) {
+            csuser = new ConvoSyncUser();
+            csuser.name = user.getName();
+            csuser.afk = user.isAfk();
+            users.put(csuser.name, csuser);
         }
-        User csuser = new User();
-        csuser.name = user.getName();
-        csuser.afk = user.isAfk();
-        users.add(csuser);
         return csuser;
     }
 
-    private User getUser(String name) {
-        for (User user : users) {
-            if (user.name.equals(name)) {
-                return user;
-            }
-        }
-        return null;
-    }
-
-    public void remove(String name) {
-        users.remove(getUser(name));
-    }
-
-    public boolean chat(Player player) {
+    public boolean canChat(Player player) {
         return !ess.getUser(player.getPlayer().getName()).isVanished();
     }
 
-    private static class User {
+    private static class ConvoSyncUser {
 
-        private String name;
-        private boolean afk;
+        String name;
+        boolean afk;
     }
 }

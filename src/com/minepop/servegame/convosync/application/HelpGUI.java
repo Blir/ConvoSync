@@ -22,6 +22,7 @@ public class HelpGUI extends javax.swing.JFrame {
 
     /**
      * Creates new form HelpGUI
+     * @throws java.net.URISyntaxException
      */
     protected HelpGUI()
             throws URISyntaxException {

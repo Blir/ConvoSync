@@ -19,8 +19,10 @@ import static com.minepop.servegame.convosync.server.ConvoSyncServer.LOGGER;
  */
 public final class Messenger {
 
-    private ConvoSyncServer server;
-    private Map<String, String> userMap;
+    private final ConvoSyncServer server;
+    private final Map<String, String> userMap;
+    private final Set<MessageHandler> handlers = new HashSet<MessageHandler>();
+    private final Set<MessageFilter> filters = new HashSet<MessageFilter>();
     private final List<Client> aliveClients;
     /**
      * Clients whose alive variable is false; to be removed from aliveClients.
@@ -44,11 +46,16 @@ public final class Messenger {
      * @param o      the message to be sent
      * @param sender the sender of the message, null if from no particular
      *               client
+     * @throws IllegalArgumentException if o is not a Message or a String
      */
-    protected void out(Object o, Client sender) {
+    protected void out(Object o, Client sender)
+            throws IllegalArgumentException {
         if (sender != null && !sender.auth) {
             return;
         }
+
+        LOGGER.log(Level.FINER, "Messenger processing a(n) {0} : {1}",
+                   new Object[]{o.getClass().getName(), o});
 
         synchronized (aliveClients) {
 
@@ -72,6 +79,12 @@ public final class Messenger {
                 out((PlayerListUpdate) o);
             } else if (o instanceof DisconnectMessage) {
                 close((DisconnectMessage) o);
+            } else if (o instanceof CustomMessage) {
+                if (!out((CustomMessage) o, sender)) {
+                    LOGGER.log(Level.WARNING, "No filter found for custom message {0}", o);
+                }
+            } else {
+                throw new IllegalArgumentException(String.format("Unsupported object: %s", o.toString()));
             }
 
             if (!deadClients.isEmpty()) {
@@ -80,6 +93,60 @@ public final class Messenger {
                 deadClients.clear();
             }
         }
+    }
+
+    private boolean out(CustomMessage msg, Client sender) {
+        MessageFilter filter = getMessageFilter(msg.getName());
+        if (filter == null) {
+            return false;
+        }
+        if (!filter.isEnabled()) {
+            return true;
+        }
+        for (Client client : aliveClients) {
+            if (filter.filter(msg, client)) {
+                client.sendMsg(msg, msg.overrides());
+            }
+        }
+        return true;
+    }
+
+    private MessageFilter getMessageFilter(String pluginName) {
+        for (MessageFilter filter : filters) {
+            if (filter.getName().equals(pluginName)) {
+                return filter;
+            }
+        }
+        return null;
+    }
+
+    protected boolean fireMessageHandlers(Client client, Message msg) {
+        for (MessageHandler handler : handlers) {
+            if (handler.handle(client, msg)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public int disableMessageHandlers(String name) {
+        int count = 0;
+        for (MessageHandler handler : handlers) {
+            if (handler.getName().equals(name)) {
+                handler.disable();
+                count++;
+            }
+        }
+        return count;
+    }
+
+    public boolean disableMessageFilter(String name) {
+        MessageFilter filter = getMessageFilter(name);
+        if (filter == null) {
+            return false;
+        }
+        filter.disable();
+        return true;
     }
 
     private static String clientListToString(Collection<Client> clients) {
@@ -132,7 +199,7 @@ public final class Messenger {
 
     private void out(PrivateMessage msg, Client sender) {
         String clientName = userMap.get(msg.RECIPIENT);
-        if (clientName.equals("CS-Client")) {
+        if (clientName != null && clientName.equals("CS-Client")) {
             clientName = msg.RECIPIENT;
         }
         if (clientName == null && sender != null) {
@@ -190,7 +257,7 @@ public final class Messenger {
     private void out(PlayerListUpdate update) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION && client.auth
-                && (!update.VANISH || !server.getUser(client.name).op)) {
+                && (!update.VANISH || !server.users.get(client.name).op)) {
                 client.sendMsg(update, false);
             }
         }
@@ -199,11 +266,19 @@ public final class Messenger {
     private void close(DisconnectMessage dmsg) {
         for (Client client : aliveClients) {
             try {
-                client.close(false, true, dmsg);
+                client.close(false, true, false, dmsg);
             } catch (IOException ex) {
                 LOGGER.log(Level.FINE, "Error closing {0} : {1}",
                            new Object[]{client.localname, ex});
             }
         }
+    }
+
+    public boolean addMessageHandler(MessageHandler handler) {
+        return handlers.add(handler);
+    }
+
+    public boolean addMessageFilter(MessageFilter filter) {
+        return filters.add(filter);
     }
 }

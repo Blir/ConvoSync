@@ -16,7 +16,7 @@ import org.bukkit.plugin.Plugin;
  */
 public class EssentialsListener implements Listener {
 
-    private ConvoSync plugin;
+    private final ConvoSync plugin;
     private Essentials ess;
 
     protected EssentialsListener(ConvoSync plugin) {

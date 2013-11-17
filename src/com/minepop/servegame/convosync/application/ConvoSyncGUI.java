@@ -16,13 +16,14 @@ import java.util.logging.Level;
  */
 public class ConvoSyncGUI extends javax.swing.JFrame {
 
-    private ConvoSyncClient client;
-    private javax.swing.DefaultListModel<String> model;
+    private final ConvoSyncClient client;
+    private final javax.swing.DefaultListModel<String> model;
     private final Calendar CAL;
     private boolean busy;
 
     /**
      * Creates new form ConvoSyncGUI
+     * @param client
      */
     protected ConvoSyncGUI(ConvoSyncClient client) {
         super(client.toString());
