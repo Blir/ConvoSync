@@ -1,3 +1,9 @@
 Manifest-Version: 1.0
+Ant-Version: Apache Ant 1.9.1
+Created-By: 1.7.0_40-b43 (Oracle Corporation)
+Class-Path: lib/BlirLibrary.jar lib/Essentials.jar lib/bukkit-1.6.4-R0
+ .1-20130923.182036-4.jar
 X-COMMENT: Main-Class will be added automatically by build
+Main-Class: com.github.blir.convosync.Main
+
 
