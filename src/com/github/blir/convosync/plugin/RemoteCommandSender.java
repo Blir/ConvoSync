@@ -1,5 +1,8 @@
 package com.github.blir.convosync.plugin;
 
+import com.github.blir.convosync.net.CommandResponse;
+import com.github.blir.convosync.net.MessageRecipient;
+
 import java.util.Set;
 
 import org.bukkit.Server;
@@ -18,16 +21,16 @@ import org.bukkit.plugin.Plugin;
 public class RemoteCommandSender implements CommandSender {
 
     private final ConvoSync PLUGIN;
-    private final String NAME;
+    private final MessageRecipient SENDER;
 
-    public RemoteCommandSender(String name, ConvoSync plugin) {
-        this.NAME = name;
+    public RemoteCommandSender(MessageRecipient sender, ConvoSync plugin) {
         this.PLUGIN = plugin;
+        this.SENDER = sender;
     }
 
     @Override
     public void sendMessage(String msg) {
-        PLUGIN.out(msg, NAME);
+        PLUGIN.out(new CommandResponse(msg, SENDER), false);
     }
 
     @Override
@@ -44,7 +47,7 @@ public class RemoteCommandSender implements CommandSender {
 
     @Override
     public String getName() {
-        return NAME;
+        return SENDER.NAME;
     }
 
     @Override

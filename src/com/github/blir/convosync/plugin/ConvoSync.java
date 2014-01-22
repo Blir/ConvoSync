@@ -1,18 +1,7 @@
 package com.github.blir.convosync.plugin;
 
-import com.github.blir.convosync.net.Message;
-import com.github.blir.convosync.net.PlayerMessage;
-import com.github.blir.convosync.net.UserListRequest;
-import com.github.blir.convosync.net.UserRegistration;
-import com.github.blir.convosync.net.CommandMessage;
-import com.github.blir.convosync.net.AuthenticationRequestResponse;
-import com.github.blir.convosync.net.DisconnectMessage;
-import com.github.blir.convosync.net.ChatMessage;
-import com.github.blir.convosync.net.PrivateMessage;
-import com.github.blir.convosync.net.SetEnabledProperty;
-import com.github.blir.convosync.net.PlayerListMessage;
-import com.github.blir.convosync.net.PluginAuthenticationRequest;
 import com.github.blir.convosync.Main;
+import com.github.blir.convosync.net.*;
 
 import java.io.*;
 import java.net.Socket;
@@ -43,6 +32,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
 
         SETIP, SETPORT, RECONNECT, DISCONNECT, STATUS, SETMAXPLAYERS, USERS, VERSION
     }
+
     private int port, players, maxPlayers = 25;
     private String ip, password;
     private ObjectInputStream in;
@@ -53,6 +43,10 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     private final Map<String, User> users = new HashMap<String, User>();
     private EssentialsTask essTask;
     private final Map<String, String> lastPM = new HashMap<String, String>();
+
+    public String randomString(int len) {
+        return Main.randomString(null, len);
+    }
 
     /**
      *
@@ -294,7 +288,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             for (int idx = 1; idx < args.length; idx++) {
                 sb.append(" ").append(args[idx]);
             }
-            out(args[0], sender.getName(), sb.toString().substring(1));
+            out(new MessageRecipient(args[0]),
+                new MessageRecipient(sender.getName(),
+                                     sender instanceof Player
+                                     ? MessageRecipient.SenderType.MINECRAFT_PLAYER
+                                     : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                sb.toString().substring(1));
             return true;
         } else if (cmd.getName().equals("ctellr") && args.length > 0) {
             String to = lastPM.get(sender.getName());
@@ -317,14 +316,14 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             for (String arg : args) {
                 sb.append(" ").append(arg);
             }
-            out(to, sender.getName(), sb.toString().substring(1));
+            out(new MessageRecipient(to),
+                new MessageRecipient(sender.getName(),
+                                     sender instanceof Player
+                                     ? MessageRecipient.SenderType.MINECRAFT_PLAYER
+                                     : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                sb.toString().substring(1));
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
-            if (!(sender instanceof Player)) {
-                sender.sendMessage(ChatColor.RED
-                                   + "You must be a player to use this command.");
-                return true;
-            }
             if (!connected) {
                 sender.sendMessage(ChatColor.RED
                                    + "Cannot send command : Disconnected from server.");
@@ -350,7 +349,13 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                         for (int idx2 = idx + 2; idx2 < args.length; idx2++) {
                             sb.append(" ").append(args[idx2]);
                         }
-                        cmd(sender.getName(), server, sb.toString());
+                        cmd(new MessageRecipient(
+                                sender instanceof Player
+                                ? sender.getName() : getServer().getServerName(),
+                                sender instanceof Player
+                                ? MessageRecipient.SenderType.MINECRAFT_PLAYER
+                                : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                            server, sb.toString());
                         return true;
                     } else {
                         sb.append(" ").append(args[idx]);
@@ -362,7 +367,13 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                 for (int idx = 2; idx < args.length; idx++) {
                     sb.append(" ").append(args[idx]);
                 }
-                cmd(sender.getName(), args[0], sb.toString());
+                cmd(new MessageRecipient(
+                        sender instanceof Player
+                        ? sender.getName() : getServer().getServerName(),
+                        sender instanceof Player
+                        ? MessageRecipient.SenderType.MINECRAFT_PLAYER
+                        : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                    args[0], sb.toString());
                 return true;
             }
             return false;
@@ -388,19 +399,18 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                                    + "You must be a player to use this command!");
                 return true;
             }
-            Random rng = new Random();
             StringBuilder sb = new StringBuilder(
                     new String[]{"poptarts", "fedora", "oops", "potato",
                                  "cabbage", "redhat", "pinkypie", "fluttershy",
                                  "badwolf", "iPassword", "tuesday", "tardis",
                                  "mycroft", "cafebabe", "steve", "herobrine",
                                  "creeper", "cthulhu", "zezima", "zelda",
-                                 "hyrule"}[rng.nextInt(21)]);
+                                 "hyrule"}[Main.RNG.nextInt(21)]);
             for (int idx = 0; idx < 4; idx++) {
-                sb.append((char) (rng.nextInt(10) + 48));
+                sb.append((char) (Main.RNG.nextInt(10) + 48));
             }
             String newPassword = sb.toString();
-            out(new UserRegistration(sender.getName(), newPassword), false);
+            out(new UserRegistration(sender.getName(), newPassword, randomString(100)), false);
             sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
                                + ChatColor.BLUE + newPassword + ChatColor.GREEN + "\".");
             return true;
@@ -536,15 +546,16 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         return out(new ChatMessage(s, false), override);
     }
 
-    protected boolean out(String recip, String msg) {
-        return out(new PlayerMessage(recip, msg), false);
+    protected boolean out(String msg, MessageRecipient recip) {
+        return out(new PlayerMessage(msg, recip), false);
     }
 
-    private boolean cmd(String sender, String server, String cmd) {
+    private boolean cmd(MessageRecipient sender, String server, String cmd) {
         return out(new CommandMessage(sender, server, cmd), false);
     }
 
-    private boolean out(String recip, String sender, String msg) {
+    private boolean out(MessageRecipient recip, MessageRecipient sender,
+                        String msg) {
         return out(new PrivateMessage(recip, sender, msg, getServer().getServerName()), false);
     }
 
@@ -596,7 +607,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     /**
      * Used to listen to cross-server canChat.
      */
-    public interface ChatListener {
+    public static interface ChatListener {
 
         /**
          * Called when cross-server canChat occurs.
@@ -619,8 +630,8 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     private void processMessage(Message msg) {
         if (msg instanceof PrivateMessage) {
             PrivateMessage pm = (PrivateMessage) msg;
-            lastPM.put(pm.RECIPIENT, pm.SENDER);
-            if (pm.RECIPIENT.equalsIgnoreCase("console")) {
+            lastPM.put(pm.RECIPIENT.NAME, pm.SENDER.NAME);
+            if (pm.RECIPIENT.NAME.equalsIgnoreCase("console")) {
                 getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
                                 new Object[]{ChatColor.GOLD, pm.SERVER,
                                              pm.SENDER,
@@ -632,7 +643,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                                       + "] " + ChatColor.WHITE
                                       + pm.MSG, pm.SENDER), false);
             } else {
-                Player player = getServer().getPlayerExact(pm.RECIPIENT);
+                Player player = getServer().getPlayerExact(pm.RECIPIENT.NAME);
                 if (player != null) {
                     player.sendMessage(ChatColor.GOLD + "[["
                                        + pm.SERVER + "]" + pm.SENDER
@@ -649,10 +660,10 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         }
         if (msg instanceof PlayerMessage) {
             PlayerMessage pm = (PlayerMessage) msg;
-            if (pm.RECIPIENT.equals("CONSOLE")) {
+            if (pm.RECIPIENT.TYPE == MessageRecipient.SenderType.MINECRAFT_CONSOLE) {
                 getLogger().info(pm.MSG);
             } else {
-                Player player = getServer().getPlayerExact(pm.RECIPIENT);
+                Player player = getServer().getPlayerExact(pm.RECIPIENT.NAME);
                 if (player != null) {
                     player.sendMessage(pm.MSG);
                 }
@@ -684,16 +695,16 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         if (msg instanceof CommandMessage) {
             CommandMessage cmd = (CommandMessage) msg;
             if (!getConfig().getBoolean("allow-cross-server-commands")) {
-                out(new PlayerMessage(ChatColor.RED
-                                      + "This server doesn't allow cross-server commands.",
-                                      cmd.SENDER), false);
+                out(new CommandResponse(ChatColor.RED
+                                        + "This server doesn't allow cross-server commands.",
+                                        cmd.SENDER), false);
                 return;
             }
             getLogger().log(Level.INFO, "Executing remote command {0}", cmd);
             try {
-                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, ConvoSync.this), cmd.CMD);
+                getServer().dispatchCommand(new RemoteCommandSender(cmd.SENDER, this), cmd.CMD);
             } catch (CommandException ex) {
-                getLogger().log(Level.SEVERE, null, ex);
+                getLogger().log(Level.SEVERE, "Error executing remote command:", ex);
             }
             return;
         }
@@ -766,7 +777,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                         }
                     }
                 } catch (ClassNotFoundException ex) {
-                    getLogger().log(Level.SEVERE, null, ex);
+                    getLogger().log(Level.SEVERE, "Error reading from socket:", ex);
                 }
             }
         }

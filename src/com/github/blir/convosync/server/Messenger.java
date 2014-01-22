@@ -3,7 +3,6 @@ package com.github.blir.convosync.server;
 import com.github.blir.convosync.net.*;
 import com.github.blir.convosync.server.Client.ClientType;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 
@@ -21,8 +20,6 @@ public final class Messenger {
 
     private final ConvoSyncServer server;
     private final Map<String, String> userMap;
-    private final Set<MessageHandler> handlers = new HashSet<MessageHandler>();
-    private final Set<MessageFilter> filters = new HashSet<MessageFilter>();
     private final List<Client> aliveClients;
     /**
      * Clients whose alive variable is false; to be removed from aliveClients.
@@ -46,15 +43,13 @@ public final class Messenger {
      * @param o      the message to be sent
      * @param sender the sender of the message, null if from no particular
      *               client
-     * @throws IllegalArgumentException if o is not a Message or a String
      */
-    protected void out(Object o, Client sender)
-            throws IllegalArgumentException {
+    protected void out(Object o, Client sender) {
         if (sender != null && !sender.auth) {
             return;
         }
 
-        LOGGER.log(Level.FINER, "Messenger processing a(n) {0} : {1}",
+        LOGGER.log(Level.FINER, "Messenger processing {0} : {1}",
                    new Object[]{o.getClass().getName(), o});
 
         synchronized (aliveClients) {
@@ -77,14 +72,10 @@ public final class Messenger {
                 out((CommandMessage) o, sender);
             } else if (o instanceof PlayerListUpdate) {
                 out((PlayerListUpdate) o);
+            } else if (o instanceof ServerListUpdate) {
+                out((ServerListUpdate) o);
             } else if (o instanceof DisconnectMessage) {
                 close((DisconnectMessage) o);
-            } else if (o instanceof CustomMessage) {
-                if (!out((CustomMessage) o, sender)) {
-                    LOGGER.log(Level.WARNING, "No filter found for custom message {0}", o);
-                }
-            } else {
-                throw new IllegalArgumentException(String.format("Unsupported object: %s", o.toString()));
             }
 
             if (!deadClients.isEmpty()) {
@@ -93,60 +84,6 @@ public final class Messenger {
                 deadClients.clear();
             }
         }
-    }
-
-    private boolean out(CustomMessage msg, Client sender) {
-        MessageFilter filter = getMessageFilter(msg.getName());
-        if (filter == null) {
-            return false;
-        }
-        if (!filter.isEnabled()) {
-            return true;
-        }
-        for (Client client : aliveClients) {
-            if (filter.filter(msg, client)) {
-                client.sendMsg(msg, msg.overrides());
-            }
-        }
-        return true;
-    }
-
-    private MessageFilter getMessageFilter(String pluginName) {
-        for (MessageFilter filter : filters) {
-            if (filter.getName().equals(pluginName)) {
-                return filter;
-            }
-        }
-        return null;
-    }
-
-    protected boolean fireMessageHandlers(Client client, Message msg) {
-        for (MessageHandler handler : handlers) {
-            if (handler.handle(client, msg)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    public int disableMessageHandlers(String name) {
-        int count = 0;
-        for (MessageHandler handler : handlers) {
-            if (handler.getName().equals(name)) {
-                handler.disable();
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public boolean disableMessageFilter(String name) {
-        MessageFilter filter = getMessageFilter(name);
-        if (filter == null) {
-            return false;
-        }
-        filter.disable();
-        return true;
     }
 
     private static String clientListToString(Collection<Client> clients) {
@@ -176,10 +113,8 @@ public final class Messenger {
      * Updates the player list for the APPLICATION clients.
      */
     protected void sendPlayerListUpdate() {
-        PlayerListUpdate update;
-        update = new PlayerListUpdate(userMap.keySet().toArray(
-                new String[userMap.size()]), false);
-        out(update, null);
+        out(new PlayerListUpdate(userMap.keySet().toArray(
+                new String[userMap.size()]), false), null);
     }
 
     /**
@@ -197,10 +132,20 @@ public final class Messenger {
         out(update, null);
     }
 
+    protected void sendServerListUpdate() {
+        List<String> serverList = new LinkedList<String>();
+        for (Client client : aliveClients) {
+            if (client.type == ClientType.PLUGIN) {
+                serverList.add(client.localname);
+            }
+        }
+        out(new ServerListUpdate(serverList.toArray(new String[serverList.size()])), null);
+    }
+
     private void out(PrivateMessage msg, Client sender) {
-        String clientName = userMap.get(msg.RECIPIENT);
+        String clientName = userMap.get(msg.RECIPIENT.NAME);
         if (clientName != null && clientName.equals("CS-Client")) {
-            clientName = msg.RECIPIENT;
+            clientName = msg.RECIPIENT.NAME;
         }
         if (clientName == null && sender != null) {
             sender.sendMsg(new PlayerMessage(
@@ -217,19 +162,40 @@ public final class Messenger {
     }
 
     private void out(PlayerMessage msg, Client sender) {
-        String clientName = userMap.get(msg.RECIPIENT);
-        if (clientName == null) {
-            LOGGER.log(Level.WARNING, "Is {0} a ghost?", msg.RECIPIENT);
-            return;
-        }
-        if (clientName.equals("CS-Client")) {
-            clientName = msg.RECIPIENT;
-        }
-        for (Client client : aliveClients) {
-            if (client.localname.equals(clientName)) {
-                client.sendMsg(msg, false);
-                return;
-            }
+        switch (msg.RECIPIENT.TYPE) {
+            case CONVOSYNC_CONSOLE:
+                LOGGER.log(Level.INFO, msg.MSG);
+                break;
+            case CONVOSYNC_CLIENT:
+                for (Client client : aliveClients) {
+                    if (client.type == ClientType.APPLICATION
+                        && client.localname.equals(msg.RECIPIENT.NAME)) {
+
+                        client.sendMsg(msg, false);
+                        return;
+                    }
+                }
+                break;
+            case MINECRAFT_PLAYER:
+                String clientName = userMap.get(msg.RECIPIENT.NAME);
+                for (Client client : aliveClients) {
+                    if (client.type == ClientType.PLUGIN
+                        && client.localname.equals(clientName)) {
+
+                        client.sendMsg(msg, false);
+                        return;
+                    }
+                }
+            case MINECRAFT_CONSOLE:
+                for (Client client : aliveClients) {
+                    if (client.type == ClientType.PLUGIN
+                        && client.localname.equals(msg.RECIPIENT.NAME)) {
+
+                        client.sendMsg(msg, false);
+                        return;
+                    }
+                }
+                break;
         }
     }
 
@@ -239,7 +205,7 @@ public final class Messenger {
                 && client.name.equalsIgnoreCase(msg.TARGET)) {
                 client.sendMsg(msg, false);
                 if (sender != null) {
-                    sender.sendMsg(new PlayerMessage(
+                    sender.sendMsg(new CommandResponse(
                             COLOR_CHAR + "aIssuing command " + COLOR_CHAR + "9"
                             + msg.CMD + COLOR_CHAR + "a on " + COLOR_CHAR + "9"
                             + msg.TARGET + COLOR_CHAR + "a.", msg.SENDER), false);
@@ -251,6 +217,8 @@ public final class Messenger {
             sender.sendMsg(new PlayerMessage(
                     COLOR_CHAR + "cServer " + COLOR_CHAR
                     + "9" + msg.TARGET + COLOR_CHAR + "c not found.", msg.SENDER), false);
+        } else {
+            LOGGER.log(Level.INFO, "No such Minecraft server {0}.", msg.TARGET);
         }
     }
 
@@ -263,22 +231,18 @@ public final class Messenger {
         }
     }
 
-    private void close(DisconnectMessage dmsg) {
+    private void out(ServerListUpdate update) {
         for (Client client : aliveClients) {
-            try {
-                client.close(false, true, false, dmsg);
-            } catch (IOException ex) {
-                LOGGER.log(Level.FINE, "Error closing {0} : {1}",
-                           new Object[]{client.localname, ex});
+            if (client.type == ClientType.APPLICATION
+                && client.auth && server.users.get(client.name).op) {
+                client.sendMsg(update, false);
             }
         }
     }
 
-    public boolean addMessageHandler(MessageHandler handler) {
-        return handlers.add(handler);
-    }
-
-    public boolean addMessageFilter(MessageFilter filter) {
-        return filters.add(filter);
+    private void close(DisconnectMessage dmsg) {
+        for (Client client : aliveClients) {
+            client.close(false, true, false, dmsg);
+        }
     }
 }

@@ -4,6 +4,7 @@ import blir.swing.listener.InputListener;
 import blir.swing.quickgui.InputBox;
 import com.github.blir.convosync.Main;
 import java.awt.Cursor;
+import javax.swing.JFrame;
 
 /**
  *
@@ -35,6 +36,9 @@ public class LoginGUI extends javax.swing.JFrame {
         }
         if (password != null) {
             jPasswordField1.setText(password);
+        }
+        if (client.defaultCloseOperation != JFrame.EXIT_ON_CLOSE) {
+            setDefaultCloseOperation(client.defaultCloseOperation);
         }
         jTextField1.grabFocus();
         jTextField1.setSelectionStart(0);

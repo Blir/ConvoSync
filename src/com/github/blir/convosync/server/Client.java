@@ -102,11 +102,12 @@ public final class Client implements Runnable {
                 crash(ex);
             }
         }
+        LOGGER.log(Level.FINER, "{0} has stopped reading from the socket.", localname);
     }
 
     private synchronized void processMessage(Message msg)
             throws IOException {
-        if (msg instanceof PrivateMessage || msg instanceof PlayerMessage) {
+        if (msg instanceof PlayerMessage) {
             messenger.out(msg, this);
         } else if (msg instanceof ChatMessage) {
             if (server.usePrefix || type == ClientType.APPLICATION) {
@@ -127,7 +128,7 @@ public final class Client implements Runnable {
                 } else {
                     sendMsg(new PlayerMessage(
                             "You don't have permission to use cross-server commands.",
-                            name), false);
+                            ((CommandMessage) msg).SENDER), false);
                 }
             } else {
                 messenger.out((CommandMessage) msg, this);
@@ -197,6 +198,7 @@ public final class Client implements Runnable {
             }
             messenger.out(name + " has connected.", this);
             messenger.sendPlayerListUpdate();
+            messenger.sendServerListUpdate();
         } else if (msg instanceof ApplicationAuthenticationRequest) {
             type = ClientType.APPLICATION;
             AuthenticationRequestResponse.Reason reason = null;
@@ -211,7 +213,7 @@ public final class Client implements Runnable {
             if (user == null) {
                 reason = AuthenticationRequestResponse.Reason.INVALID_USER;
             } else {
-                if (authReq.PASSWORD.equals(user.PASSWORD)) {
+                if (user.validate(authReq)) {
                     if (server.banlist.contains(authReq.NAME)) {
                         reason = AuthenticationRequestResponse.Reason.BANNED;
                     } else {
@@ -231,6 +233,7 @@ public final class Client implements Runnable {
                 messenger.out(name + " has joined.", this);
                 server.userMap.put(name, "CS-Client");
                 messenger.sendPlayerListUpdate();
+                messenger.sendServerListUpdate();
             }
         } else if (msg instanceof PlayerVanishMessage) {
             PlayerVanishMessage vmsg = (PlayerVanishMessage) msg;
@@ -262,7 +265,7 @@ public final class Client implements Runnable {
             switch (prop.PROPERTY) {
                 case PASSWORD:
                     server.users.remove(name);
-                    server.users.put(name, new User(new UserRegistration(name, prop.VALUE)));
+                    server.users.put(name, new User(name, prop.VALUE, ConvoSyncServer.randomString(100)));
                     sendMsg(new PlayerMessage("Password changed.", name), false);
                     break;
             }
@@ -277,15 +280,6 @@ public final class Client implements Runnable {
         } else if (msg instanceof DisconnectMessage) {
             close(false, false, true, (DisconnectMessage) null);
             messenger.out(name + " has disconnected.", this);
-        } else if (msg instanceof CustomMessage) {
-            CustomMessage cmsg = (CustomMessage) msg;
-            if (!messenger.fireMessageHandlers(this, cmsg)) {
-                LOGGER.log(Level.WARNING, "Improperly supported message: {0}", cmsg);
-                LOGGER.log(Level.WARNING, "Disabled {0} of {1}''s handlers.",
-                           new Object[]{
-                               messenger.disableMessageHandlers(cmsg.getName()),
-                               cmsg.getName()});
-            }
         }
     }
 
@@ -300,10 +294,6 @@ public final class Client implements Runnable {
         if (enabled || override) {
             sendMsg(msg);
         }
-    }
-
-    public void sendMsg(CustomMessage msg) {
-        sendMsg((Message) msg, msg.overrides());
     }
 
     private void sendMsg(Message msg) {
@@ -335,17 +325,20 @@ public final class Client implements Runnable {
      * @param update whether to send a player list update as a result of this
      *               client being closed
      * @param dmsg   the DisconectMessage to write
-     * @throws IOException if the socket closes improperly
      */
     protected void close(boolean kick, boolean msg, boolean update,
-                         DisconnectMessage dmsg)
-            throws IOException {
+                         DisconnectMessage dmsg) {
         messenger.deadClients.add(this);
         if (msg && dmsg != null) {
             sendMsg(dmsg, true);
         }
         alive = false;
-        socket.close();
+        try {
+            socket.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.SEVERE, "Error closing {0}; {1}",
+                       new Object[]{localname, ex});
+        }
         if (kick) {
             messenger.out(name + " has been kicked.", this);
         }
@@ -374,22 +367,18 @@ public final class Client implements Runnable {
      * @throws IOException if the socket closes improperly
      */
     protected void close(boolean kick, boolean msg, boolean update,
-                         DisconnectMessage.Reason reason)
-            throws IOException {
+                         DisconnectMessage.Reason reason) {
         close(kick, msg, update, reason == null ? null : new DisconnectMessage(reason));
     }
 
     private void crash(Throwable t) {
         LOGGER.log(Level.WARNING, "Closing {0}", localname);
-        try {
-            close(false, false, true, DisconnectMessage.Reason.CRASHED);
-        } catch (IOException ex) {
-            // ignore
-        }
+        close(false, false, true, DisconnectMessage.Reason.CRASHED);
         messenger.out(COLOR_CHAR + "c" + localname
                       + " has crashed or improperly disconnected.", null);
     }
 
+    // <editor-fold defaultstate="collapsed" desc="Public API">
     public boolean isAlive() {
         return alive;
     }
@@ -416,7 +405,7 @@ public final class Client implements Runnable {
 
     public ClientType getClientType() {
         return type;
-    }
+    } // </editor-fold>
 
     @Override
     public String toString() {

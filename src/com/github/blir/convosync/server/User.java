@@ -1,5 +1,6 @@
 package com.github.blir.convosync.server;
 
+import com.github.blir.convosync.net.AuthenticationRequest;
 import com.github.blir.convosync.net.UserRegistration;
 
 /**
@@ -8,10 +9,11 @@ import com.github.blir.convosync.net.UserRegistration;
  * 
  * @author Blir
  */
-public final class User implements java.io.Serializable {
+public final class User {
 
-    private static final long serialVersionUID = 7526472295622776147L;
-    public final String NAME, PASSWORD;
+    public final String NAME, SALT;
+    public final int SALTED_HASH;
+    
     /**
      * Similar to Bukkit's OP. A ConvoSync GUI client user must be OP to send
      * cross-server commands. An OP User can also see vanished players.
@@ -20,10 +22,31 @@ public final class User implements java.io.Serializable {
 
     protected User(UserRegistration reg) {
         this.NAME = reg.USER;
-        this.PASSWORD = reg.PASSWORD;
+        this.SALT = reg.SALT;
+        this.SALTED_HASH = reg.SALTED_HASH;
+    }
+    
+    protected User(String name, int saltedHash, String salt) {
+        this.NAME = name;
+        this.SALTED_HASH = saltedHash;
+        this.SALT = salt;
+    }
+    
+    protected User(String name, String password, String salt) {
+        this.NAME = name;
+        this.SALT = salt;
+        this.SALTED_HASH = (password + SALT).hashCode();
     }
     
     public boolean isOp() {
         return op;
+    }
+    
+    public boolean validate(String password) {
+        return (password + SALT).hashCode() == SALTED_HASH;
+    }
+    
+    public boolean validate(AuthenticationRequest authReq) {
+        return (authReq.PASSWORD + SALT).hashCode() == SALTED_HASH;
     }
 }

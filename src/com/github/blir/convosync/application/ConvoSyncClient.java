@@ -1,24 +1,14 @@
 package com.github.blir.convosync.application;
 
-import com.github.blir.convosync.net.Message;
-import com.github.blir.convosync.net.PlayerMessage;
-import com.github.blir.convosync.net.ApplicationAuthenticationRequest;
-import com.github.blir.convosync.net.AuthenticationRequestResponse;
-import com.github.blir.convosync.net.DisconnectMessage;
-import com.github.blir.convosync.net.ChatMessage;
-import com.github.blir.convosync.net.PrivateMessage;
-import com.github.blir.convosync.net.PlayerListUpdate;
-import blir.swing.QuickGUI;
-import blir.util.logging.QuickFormatter;
-
 import com.github.blir.convosync.Main;
+import com.github.blir.convosync.net.*;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Properties;
 import java.util.logging.*;
-import javax.swing.UnsupportedLookAndFeelException;
+import javax.swing.JFrame;
 
 /**
  *
@@ -27,7 +17,7 @@ import javax.swing.UnsupportedLookAndFeelException;
 public final class ConvoSyncClient {
 
     private ConvoSyncGUI gui;
-    private LoginGUI login;
+    protected LoginGUI login;
     /**
      * The Minecraft user name of the user on this ConvoSync client.
      */
@@ -38,6 +28,7 @@ public final class ConvoSyncClient {
      * The connection timeout value to use when connecting to the server.
      */
     protected int timeout = 20000;
+    protected int defaultCloseOperation = JFrame.EXIT_ON_CLOSE;
     private Socket socket;
     protected boolean pm, connected, auth;
     private boolean remember;
@@ -47,7 +38,7 @@ public final class ConvoSyncClient {
 
     static {
         Handler handler = new ConsoleHandler();
-        Formatter formatter = new QuickFormatter("HH:mm:ss yyyy/MM/dd") {
+        Formatter formatter = new ClientFormatter("yyyy/MM/dd HH:mm:ss") {
             @Override
             public String format(LogRecord rec) {
                 return Main.format(super.format(rec));
@@ -73,20 +64,11 @@ public final class ConvoSyncClient {
         LOGGER.log(Level.CONFIG, "OS Name: {0}", System.getProperty("os.name"));
         LOGGER.log(Level.CONFIG, "OS Version: {0}", System.getProperty("os.version"));
     }
-    
+
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        try {
-            QuickGUI.setLookAndFeel("Windows");
-        } catch (ClassNotFoundException ex) {
-        } catch (InstantiationException ex) {
-        } catch (IllegalAccessException ex) {
-        } catch (UnsupportedLookAndFeelException ex) {
-        }
-        // ignore all of those; just use the default look and feel
-
         new ConvoSyncClient().run(args);
     }
 
@@ -105,8 +87,17 @@ public final class ConvoSyncClient {
                     name = arg.split(":")[1];
                 } else if (arg.startsWith("Password:")) {
                     password = arg.split(":")[1];
+                } else if (arg.startsWith("DefaultCloseOperation:")) {
+                    defaultCloseOperation = Integer.parseInt(arg.split(":")[1]);
+                } else if (arg.startsWith("Level:")) {
+                    Level level = Level.parse(arg.split(":")[1]);
+                    LOGGER.setLevel(level);
+                    Handler[] handlers = LOGGER.getHandlers();
+                    for (Handler handler : handlers) {
+                        handler.setLevel(level);
+                    }
                 }
-            } catch (NumberFormatException ex) {
+            } catch (IllegalArgumentException ex) {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
             } catch (ArrayIndexOutOfBoundsException ex) {
                 LOGGER.log(Level.WARNING, "Invalid argument: {0}", arg);
@@ -151,7 +142,7 @@ public final class ConvoSyncClient {
     }
 
     protected String connect(String ip, int port, String password,
-            boolean remember) {
+                             boolean remember) {
         this.ip = ip;
         this.port = port;
         this.password = password;
@@ -180,7 +171,7 @@ public final class ConvoSyncClient {
         try {
             gui.clearUserList();
             LOGGER.log(Level.INFO, "Connecting to {0}:{1}...",
-                    new Object[]{ip, port});
+                       new Object[]{ip, port});
             socket = new Socket();
             socket.connect(new InetSocketAddress(ip, port), timeout);
             in = new ObjectInputStream(socket.getInputStream());
@@ -255,6 +246,7 @@ public final class ConvoSyncClient {
                     System.exit(-1);
                 }
             }
+            LOGGER.log(Level.INFO, "Input Task ended.");
         }
     }
 
@@ -263,7 +255,11 @@ public final class ConvoSyncClient {
             PrivateMessage pmsg = (PrivateMessage) msg;
             gui.log("[[" + pmsg.SERVER + "] " + pmsg.SENDER + "] -> me] " + pmsg.MSG);
             out(new PlayerMessage(Main.COLOR_CHAR + "6[me -> [CS-Client]" + name
-                    + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
+                                  + "] " + Main.COLOR_CHAR + "f" + pmsg.MSG, pmsg.SENDER));
+            return;
+        }
+        if (msg instanceof CommandResponse) {
+            gui.adminConsole.log(((CommandResponse) msg).MSG);
             return;
         }
         if (msg instanceof PlayerMessage) {
@@ -281,6 +277,14 @@ public final class ConvoSyncClient {
                 if (!elem.equals(name)) {
                     gui.addToUserList(elem);
                 }
+            }
+            return;
+        }
+        if (msg instanceof ServerListUpdate) {
+            ServerListUpdate update = (ServerListUpdate) msg;
+            gui.adminConsole.clearServerList();
+            for (String elem : update.LIST) {
+                gui.adminConsole.addToServerList(elem);
             }
             return;
         }
