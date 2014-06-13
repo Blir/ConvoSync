@@ -190,10 +190,10 @@ public final class ConvoSyncClient {
     protected void disconnect(boolean sendMsg) {
         auth = false;
         connected = false;
+        if (sendMsg) {
+            out(new DisconnectMessage());
+        }
         try {
-            if (sendMsg) {
-                out(new DisconnectMessage());
-            }
             socket.close();
         } catch (IOException ex) {
             LOGGER.log(Level.SEVERE, null, ex);

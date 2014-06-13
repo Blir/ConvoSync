@@ -288,12 +288,15 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             for (int idx = 1; idx < args.length; idx++) {
                 sb.append(" ").append(args[idx]);
             }
-            out(new MessageRecipient(args[0]),
-                new MessageRecipient(sender.getName(),
-                                     sender instanceof Player
-                                     ? MessageRecipient.SenderType.MINECRAFT_PLAYER
-                                     : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
-                sb.toString().substring(1));
+            if (sender instanceof Player) {
+                out(new MessageRecipient(args[0]),
+                    new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
+                    sb.toString().substring(1));
+            } else {
+                out(new MessageRecipient(args[0]),
+                    new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                    sb.toString().substring(1));
+            }
             return true;
         } else if (cmd.getName().equals("ctellr") && args.length > 0) {
             String to = lastPM.get(sender.getName());
@@ -316,12 +319,15 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             for (String arg : args) {
                 sb.append(" ").append(arg);
             }
-            out(new MessageRecipient(to),
-                new MessageRecipient(sender.getName(),
-                                     sender instanceof Player
-                                     ? MessageRecipient.SenderType.MINECRAFT_PLAYER
-                                     : MessageRecipient.SenderType.MINECRAFT_CONSOLE),
-                sb.toString().substring(1));
+            if (sender instanceof Player) {
+                out(new MessageRecipient(to),
+                    new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
+                    sb.toString().substring(1));
+            } else {
+                out(new MessageRecipient(to),
+                    new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                    sb.toString().substring(1));
+            }
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
             if (!connected) {
@@ -785,7 +791,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
 
     private class AutoReconnectTask implements Runnable {
 
-        private int pausetime;
+        private final int pausetime;
 
         private AutoReconnectTask(int pausetime) {
             this.pausetime = pausetime;
