@@ -364,7 +364,6 @@ public final class Client implements Runnable {
      * @param update whether to send a player list udpate as a result of this
      *               client being closed
      * @param reason the reason for which the Client is being disconnected
-     * @throws IOException if the socket closes improperly
      */
     protected void close(boolean kick, boolean msg, boolean update,
                          DisconnectMessage.Reason reason) {
