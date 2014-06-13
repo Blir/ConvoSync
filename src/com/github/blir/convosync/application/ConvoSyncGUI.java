@@ -1,16 +1,22 @@
 package com.github.blir.convosync.application;
 
-import com.github.blir.convosync.net.CommandMessage;
-import com.github.blir.convosync.net.PrivateMessage;
-import com.github.blir.convosync.net.UserPropertyChange;
+import com.github.blir.convosync.net.*;
+
 import blir.swing.listener.NewPasswordListener;
 import blir.swing.quickgui.MsgBox;
 import blir.swing.quickgui.NewPasswordBox;
+
 import com.github.blir.convosync.Main;
+
 import java.awt.Cursor;
+import java.awt.Desktop;
+import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Calendar;
 import java.util.logging.Level;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -21,10 +27,12 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private final ConvoSyncClient client;
     private final javax.swing.DefaultListModel<String> model;
     private final Calendar CAL;
+    protected final AdminConsoleGUI adminConsole;
     private boolean busy;
 
     /**
      * Creates new form ConvoSyncGUI
+     *
      * @param client
      */
     protected ConvoSyncGUI(ConvoSyncClient client) {
@@ -40,6 +48,10 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         CAL = Calendar.getInstance();
         onToggleWordWrap(null);
         setLocationRelativeTo(null);
+        adminConsole = new AdminConsoleGUI(client, this);
+        if (client.defaultCloseOperation != JFrame.EXIT_ON_CLOSE) {
+            setDefaultCloseOperation(client.defaultCloseOperation);
+        }
     }
 
     /**
@@ -68,6 +80,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         clsMenuItem = new javax.swing.JMenuItem();
         timeStampsMenuItem = new javax.swing.JCheckBoxMenuItem();
         wordWrapMenuItem = new javax.swing.JCheckBoxMenuItem();
+        adminConsoleMenuItem = new javax.swing.JMenuItem();
         optionsMenu = new javax.swing.JMenu();
         helpMenuItem = new javax.swing.JMenuItem();
 
@@ -162,12 +175,20 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         });
         viewMenu.add(wordWrapMenuItem);
 
+        adminConsoleMenuItem.setText("Admin Console");
+        adminConsoleMenuItem.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                onAdminConsoleOpened(evt);
+            }
+        });
+        viewMenu.add(adminConsoleMenuItem);
+
         jMenuBar1.add(viewMenu);
 
         optionsMenu.setText("Options");
         optionsMenu.setToolTipText("");
 
-        helpMenuItem.setText("Help");
+        helpMenuItem.setText("Help: https://github.com/Blir/ConvoSync/wiki");
         helpMenuItem.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onHelp(evt);
@@ -216,27 +237,14 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 if (input.getText().equals("")) {
                     return;
                 }
-                client.out(new PrivateMessage(userList.getSelectedValue(),
-                                              client.name, input.getText(), "CS-Client"));
+                client.out(new PrivateMessage(new MessageRecipient(userList.getSelectedValue()),
+                                              new MessageRecipient(client.name, MessageRecipient.SenderType.CONVOSYNC_CLIENT),
+                                              input.getText(), "CS-Client"));
             }
             userList.clearSelection();
-        } else if (client.auth) {
-            if (input.getText().equals("")) {
-                return;
-            }
-            if (input.getText().charAt(0) == '/') {
-                int delim = input.getText().indexOf(" ");
-                if (delim > 0) {
-                    String server = input.getText().substring(1, delim);
-                    String cmd = input.getText().substring(delim + 1);
-                    client.out(new CommandMessage(client.name, server, cmd));
-                } else {
-                    logChat("Usage: /<server> <command>");
-                }
-            } else {
-                client.out(input.getText(), false);
-                logChat(input.getText());
-            }
+        } else if (client.auth && !input.getText().equals("")) {
+            client.out(input.getText(), false);
+            logChat(input.getText());
         }
         if (!client.auth) {
             output.setText("You are not authenticated to send messages.");
@@ -254,7 +262,15 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onUserListSelection
 
     private void windowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_windowClosing
+        ConvoSyncClient.LOGGER.log(Level.FINE, "Main GUI closing.");
         client.disconnect(true);
+        if (client.defaultCloseOperation != JFrame.EXIT_ON_CLOSE) {
+            ConvoSyncClient.LOGGER.log(Level.FINE, "Not exiting on close; disposing of GUIs.");
+            if (client.login != null) {
+                client.login.dispose();
+            }
+            adminConsole.dispose();
+        }
     }//GEN-LAST:event_windowClosing
 
     private void onReconnect(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onReconnect
@@ -307,17 +323,30 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private void onLogOut(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onLogOut
         client.disconnect(true);
         setVisible(false);
+        adminConsole.setVisible(false);
         client.openLoginGUI();
         cls();
     }//GEN-LAST:event_onLogOut
 
     private void onHelp(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onHelp
+        URI help = null;
         try {
-            new HelpGUI().setVisible(true);
+            help = new URI("https://github.com/Blir/ConvoSync/wiki");
+            if (Desktop.isDesktopSupported()) {
+                Desktop.getDesktop().browse(help);
+            } else {
+                JOptionPane.showMessageDialog(rootPane, "Your desktop is not supported.", "ConvosyncClient - Error", JOptionPane.ERROR_MESSAGE);
+            }
         } catch (URISyntaxException ex) {
-            ConvoSyncClient.LOGGER.log(Level.INFO, null, ex);
+            ConvoSyncClient.LOGGER.log(Level.WARNING, "Has GitHub ceased to exist? : ", ex);
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(rootPane, "Couldn't reach " + help + ": " + ex, "ConvoSyncClient - Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_onHelp
+
+    private void onAdminConsoleOpened(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onAdminConsoleOpened
+        adminConsole.setVisible(true);
+    }//GEN-LAST:event_onAdminConsoleOpened
 
     protected void log(String s) {
         s = Main.format(s);
@@ -376,6 +405,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenu accountMenu;
+    private javax.swing.JMenuItem adminConsoleMenuItem;
     private javax.swing.JMenuItem changePasswordMenuItem;
     private javax.swing.JMenuItem clsMenuItem;
     private javax.swing.JMenu connectionMenu;

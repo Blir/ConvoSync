@@ -1,12 +1,9 @@
 package com.github.blir.convosync;
 
-import blir.swing.QuickGUI;
-
 import com.github.blir.convosync.application.ConvoSyncClient;
 import com.github.blir.convosync.server.ConvoSyncServer;
 
-import java.util.logging.Level;
-import javax.swing.UnsupportedLookAndFeelException;
+import java.util.Random;
 
 /**
  *
@@ -17,32 +14,32 @@ public class Main {
     /**
      * The version of this ConvoSync suite.
      */
-    public static final String VERSION = "1.1.0";
+    public static final String VERSION = "1.1.1";
+
+    public static final Random RNG = new Random();
 
     public static void main(final String[] args) {
-        try {
-            QuickGUI.setLookAndFeel("Windows");
-        } catch (ClassNotFoundException ex) {
-        } catch (InstantiationException ex) {
-        } catch (IllegalAccessException ex) {
-        } catch (UnsupportedLookAndFeelException ex) {
-            // ignore all these; just use the default look and feel
-        }
-
         for (String arg : args) {
             if (arg.equals("server")) {
-                int instances = ConvoSyncServer.instances();
-                if (instances == 0) {
-                    ConvoSyncServer.main(args);
-                } else {
-                    ConvoSyncServer.LOGGER.log(Level.INFO, "{0} instances of the ConvoSync server are now running.", instances + 1);
-                    new ConvoSyncServer().run(args);
-                }
+                ConvoSyncServer.main(args);
                 return;
             }
         }
         new ConvoSyncClient().run(args);
     }
+
+    public static String randomString(java.util.logging.Logger l, int len) {
+        StringBuilder string = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            string.append((char) RNG.nextInt(25) + 97);
+        }
+        String gen = string.toString();
+        if (l != null) {
+            l.log(java.util.logging.Level.FINER, "Generated random string {0}", gen);
+        }
+        return gen;
+    }
+
     /**
      * The section (§) symbol Minecraft uses to format chat.
      */

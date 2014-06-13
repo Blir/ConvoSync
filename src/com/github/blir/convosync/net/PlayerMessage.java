@@ -6,11 +6,15 @@ package com.github.blir.convosync.net;
  */
 public class PlayerMessage extends ChatMessage {
 
-    public final String RECIPIENT;
+    public final MessageRecipient RECIPIENT;
 
-    public PlayerMessage(String msg, String recip) {
+    public PlayerMessage(String msg, MessageRecipient recip) {
         super(msg, true);
         this.RECIPIENT = recip;
+    }
+    
+    public PlayerMessage(String msg, String recip) {
+        this(msg, new MessageRecipient(recip, null));
     }
     
     @Override
