@@ -152,6 +152,7 @@ public final class ConvoSyncServer {
                 dis = new DataInputStream(new FileInputStream(new File("users.dat")));
                 while (dis.available() > 0) {
                     User user = new User(dis.readUTF(), dis.readInt(), dis.readUTF());
+                    user.op = dis.readBoolean();
                     users.put(user.NAME, user);
                 }
             } finally {
@@ -396,6 +397,7 @@ public final class ConvoSyncServer {
                             dos.writeUTF(user.NAME);
                             dos.writeInt(user.SALTED_HASH);
                             dos.writeUTF(user.SALT);
+                            dos.writeBoolean(user.op);
                         }
                     } finally {
                         if (dos != null) {

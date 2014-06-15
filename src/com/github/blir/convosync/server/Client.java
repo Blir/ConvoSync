@@ -177,7 +177,7 @@ public final class Client implements Runnable {
                                                       auth
                                                       ? null
                                                       : AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
-                                                      Main.VERSION, server.users.get(name).op), true);
+                                                      Main.VERSION, false));
             for (String element : authReq.PLAYERS) {
                 if (server.userMap.get(element) != null) {
                     Client client = server.getClient(element);
