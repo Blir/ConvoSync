@@ -186,7 +186,7 @@ public final class ConvoSyncServer {
                 }
             }
             String prop = p.getProperty("chat-color");
-            chatColor = prop.length() < 1 ? '\u0000' : prop.charAt(0);
+            chatColor = prop == null || prop.length() < 1 ? '\u0000' : prop.charAt(0);
             if (chatColor != '\u0000') {
                 LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"",
                            chatColor);
@@ -280,7 +280,7 @@ public final class ConvoSyncServer {
         }
 
         while (superPassword == null || superPassword.equals("")) {
-            System.out.println("Enter a password that the Super User will use to log in: ");
+            System.out.print("Enter a password that the Super User will use to log in: ");
             superPassword = in.nextLine();
         }
 
