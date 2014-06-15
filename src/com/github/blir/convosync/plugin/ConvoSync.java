@@ -280,20 +280,16 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                                    + "Cannot send message : Connection is not authenticated.");
                 return true;
             }
-            if (args[0].equalsIgnoreCase("console")) {
-                sender.sendMessage("You cannot send a private message to a console cross-server (yet).");
-                return true;
-            }
             StringBuilder sb = new StringBuilder();
             for (int idx = 1; idx < args.length; idx++) {
                 sb.append(" ").append(args[idx]);
             }
             if (sender instanceof Player) {
-                out(new MessageRecipient(args[0]),
+                pm(new MessageRecipient(args[0]),
                     new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
                     sb.toString().substring(1));
             } else {
-                out(new MessageRecipient(args[0]),
+                pm(new MessageRecipient(args[0]),
                     new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
                     sb.toString().substring(1));
             }
@@ -320,11 +316,11 @@ public final class ConvoSync extends JavaPlugin implements Listener {
                 sb.append(" ").append(arg);
             }
             if (sender instanceof Player) {
-                out(new MessageRecipient(to),
+                pm(new MessageRecipient(to),
                     new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
                     sb.toString().substring(1));
             } else {
-                out(new MessageRecipient(to),
+                pm(new MessageRecipient(to),
                     new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
                     sb.toString().substring(1));
             }
@@ -560,7 +556,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
         return out(new CommandMessage(sender, server, cmd), false);
     }
 
-    private boolean out(MessageRecipient recip, MessageRecipient sender,
+    private boolean pm(MessageRecipient recip, MessageRecipient sender,
                         String msg) {
         return out(new PrivateMessage(recip, sender, msg, getServer().getServerName()), false);
     }

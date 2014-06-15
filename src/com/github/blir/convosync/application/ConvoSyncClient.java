@@ -30,7 +30,7 @@ public final class ConvoSyncClient {
     protected int timeout = 20000;
     protected int defaultCloseOperation = JFrame.EXIT_ON_CLOSE;
     private Socket socket;
-    protected boolean pm, connected, auth;
+    protected boolean pm, connected, auth, op;
     private boolean remember;
     private ObjectInputStream in;
     private ObjectOutputStream out;
@@ -240,6 +240,7 @@ public final class ConvoSyncClient {
                 } catch (IOException ex) {
                     LOGGER.log(Level.SEVERE, null, ex);
                     connected = false;
+                    pm = false;
                     gui.log("Connection lost.");
                 } catch (ClassNotFoundException ex) {
                     LOGGER.log(Level.SEVERE, "Fatal error.", ex);
@@ -288,9 +289,19 @@ public final class ConvoSyncClient {
             }
             return;
         }
+        if (msg instanceof UserPropertyChange) {
+            UserPropertyChange propChange = (UserPropertyChange) msg;
+            switch (propChange.PROPERTY) {
+                case OP:
+                    op = propChange.booleanValue();
+                    break;
+            }
+            return;
+        }
         if (msg instanceof AuthenticationRequestResponse) {
             AuthenticationRequestResponse response = (AuthenticationRequestResponse) msg;
             auth = response.AUTH;
+            op = response.OP;
             if (!Main.VERSION.equals(response.VERSION)) {
                 gui.log("Version mismatch: Local version " + Main.VERSION
                         + ", ConvoSync server version " + response.VERSION);

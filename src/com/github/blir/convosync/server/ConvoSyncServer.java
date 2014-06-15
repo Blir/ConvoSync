@@ -59,7 +59,7 @@ public final class ConvoSyncServer {
     public static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
-        USERS, NAME, HELP, DEBUG, VERSION, CONFIG, CLIENT, CCMD
+        USERS, NAME, HELP, DEBUG, VERSION, CLIENT, CCMD
     }
 
     /**
@@ -193,6 +193,10 @@ public final class ConvoSyncServer {
             prop = p.getProperty("use-prefixes");
             usePrefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", usePrefix);
+            pluginPassword = p.getProperty("plugin-password");
+            superPassword = p.getProperty("super-password");
+            name = p.getProperty("name");
+            port = Integer.parseInt(p.getProperty("port"));
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -422,6 +426,10 @@ public final class ConvoSyncServer {
                         p.setProperty("chat-color",
                                       chatColor == '\u0000' ? "" : String.valueOf(chatColor));
                         p.setProperty("use-prefixes", String.valueOf(usePrefix));
+                        p.setProperty("plugin-password", pluginPassword);
+                        p.setProperty("super-password", superPassword);
+                        p.setProperty("name", name);
+                        p.setProperty("port", String.valueOf(port));
                         p.store(fos, null);
                     } finally {
                         if (fos != null) {
@@ -560,28 +568,6 @@ public final class ConvoSyncServer {
             case VERSION:
                 LOGGER.log(Level.INFO, "v{0}", Main.VERSION);
                 break;
-            case CONFIG:
-                Properties p = new Properties();
-                p.setProperty("plugin-password", pluginPassword);
-                p.setProperty("super-password", superPassword);
-                p.setProperty("name", name);
-                p.setProperty("port", String.valueOf(port));
-                FileOutputStream fos = null;
-                try {
-                    try {
-                        fos = new FileOutputStream("connection.properties");
-                        p.store(fos, null);
-                        LOGGER.log(Level.INFO, "Config generated.");
-                    } finally {
-                        if (fos != null) {
-                            fos.close();
-                        }
-                    }
-                } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "Could not generate config: {0}",
-                               ex.toString());
-                }
-                break;
             case CLIENT:
                 String[] clientArgs = new String[args.length + 2];
                 System.arraycopy(args, 0, clientArgs, 2, args.length);
@@ -682,6 +668,7 @@ public final class ConvoSyncServer {
                                                    : !user.op))
                                        ? "{0} is now OP." : "{0} is no longer OP.",
                            user.NAME);
+                messenger.out(new UserPropertyChange(UserPropertyChange.Property.OP, user.op ? "true" : "false", new MessageRecipient(user.NAME, MessageRecipient.SenderType.CONVOSYNC_CLIENT)), null);
                 break;
             case UNREGISTER:
                 if (args.length < 0) {

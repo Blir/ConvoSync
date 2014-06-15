@@ -237,7 +237,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 if (input.getText().equals("")) {
                     return;
                 }
-                client.out(new PrivateMessage(new MessageRecipient(userList.getSelectedValue()),
+                client.out(new PrivateMessage(new MessageRecipient(userList.getSelectedValue(), MessageRecipient.SenderType.UNKNOWN),
                                               new MessageRecipient(client.name, MessageRecipient.SenderType.CONVOSYNC_CLIENT),
                                               input.getText(), "CS-Client"));
             }
@@ -345,7 +345,11 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_onHelp
 
     private void onAdminConsoleOpened(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onAdminConsoleOpened
-        adminConsole.setVisible(true);
+        if (client.op) {
+            adminConsole.setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(rootPane, "You must be opped to issue cross-server commands.", "ConvoSyncClient - You're not OP", JOptionPane.WARNING_MESSAGE);
+        }
     }//GEN-LAST:event_onAdminConsoleOpened
 
     protected void log(String s) {
