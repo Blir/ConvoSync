@@ -236,7 +236,7 @@ public final class Messenger {
     private void out(ServerListUpdate update) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION
-                && client.auth && server.users.get(client.name).op) {
+                && client.auth) {
                 client.sendMsg(update, false);
             }
         }
