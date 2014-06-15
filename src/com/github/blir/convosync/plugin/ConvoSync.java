@@ -640,24 +640,24 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             if (pm.RECIPIENT.NAME.equalsIgnoreCase("console")) {
                 getLogger().log(Level.INFO, "{0}[[{1}]{2}{3} -> me] {4}{5}",
                                 new Object[]{ChatColor.GOLD, pm.SERVER,
-                                             pm.SENDER,
+                                             pm.SENDER.NAME,
                                              ChatColor.GOLD, ChatColor.WHITE,
                                              pm.MSG});
                 out(new PlayerMessage(ChatColor.GOLD
                                       + "[me -> [" + getServer().getServerName()
-                                      + "]" + pm.RECIPIENT + ChatColor.GOLD
+                                      + "]" + pm.RECIPIENT.NAME + ChatColor.GOLD
                                       + "] " + ChatColor.WHITE
                                       + pm.MSG, pm.SENDER), false);
             } else {
                 Player player = getServer().getPlayerExact(pm.RECIPIENT.NAME);
                 if (player != null) {
                     player.sendMessage(ChatColor.GOLD + "[["
-                                       + pm.SERVER + "]" + pm.SENDER
+                                       + pm.SERVER + "]" + pm.SENDER.NAME
                                        + ChatColor.GOLD + " -> me] "
                                        + ChatColor.WHITE + pm.MSG);
                     out(new PlayerMessage(ChatColor.GOLD
                                           + "[me -> [" + getServer().getServerName()
-                                          + "]" + pm.RECIPIENT + ChatColor.GOLD
+                                          + "]" + pm.RECIPIENT.NAME + ChatColor.GOLD
                                           + "] " + ChatColor.WHITE
                                           + pm.MSG, pm.SENDER), false);
                 }

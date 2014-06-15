@@ -109,7 +109,7 @@ public class AdminConsoleGUI extends javax.swing.JFrame {
 
     private void onCommand(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_onCommand
         if (!commandLine.getText().equals("") && serverList.getSelectedValue() != null) {
-            client.out(new CommandMessage(new MessageRecipient(client.name), String.valueOf(serverList.getSelectedValue()), commandLine.getText()));
+            client.out(new CommandMessage(new MessageRecipient(client.name, MessageRecipient.SenderType.CONVOSYNC_CLIENT), String.valueOf(serverList.getSelectedValue()), commandLine.getText()));
             commandLine.setText("");
         }
     }//GEN-LAST:event_onCommand

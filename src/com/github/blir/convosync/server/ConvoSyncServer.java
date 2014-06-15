@@ -540,8 +540,9 @@ public final class ConvoSyncServer {
                                        + "/help                                - Prints all commands.\n"
                                        + "/debug                               - Toggles debug mode.\n"
                                        + "/version                             - Displays version info.\n"
-                                       + "/config                              - Generates the server config properties."
-                                       + "/ccmd <server name> <command> [args] - Executes the specified command on the specified server.");
+                                       + "/config                              - Generates the server config properties.\n"
+                                       + "/ccmd <server name> <command> [args] - Executes the specified command on the specified server.\n"
+                                       + "/client                              - Launches the ConvoSync client.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
