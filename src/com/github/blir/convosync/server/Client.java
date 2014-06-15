@@ -227,7 +227,7 @@ public final class Client implements Runnable {
                     reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
                 }
             }
-            sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION, server.users.get(name).op), true);
+            sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION, user == null ? false : user.op), true);
             if (auth) {
                 localname = (name = authReq.NAME);
                 messenger.out(name + " has joined.", this);
