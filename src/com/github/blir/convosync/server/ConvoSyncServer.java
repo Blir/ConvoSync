@@ -196,7 +196,11 @@ public final class ConvoSyncServer {
             pluginPassword = p.getProperty("plugin-password");
             superPassword = p.getProperty("super-password");
             name = p.getProperty("name");
-            port = Integer.parseInt(p.getProperty("port"));
+            try {
+                port = Integer.parseInt(p.getProperty("port"));
+            } catch (NumberFormatException ex) {
+                // ignore
+            }
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
