@@ -74,6 +74,8 @@ public final class Messenger {
                 out((PlayerListUpdate) o);
             } else if (o instanceof ServerListUpdate) {
                 out((ServerListUpdate) o);
+            } else if (o instanceof UserPropertyChange) {
+                out((UserPropertyChange) o);
             } else if (o instanceof DisconnectMessage) {
                 close((DisconnectMessage) o);
             }
@@ -149,7 +151,7 @@ public final class Messenger {
         }
         if (clientName == null && sender != null) {
             sender.sendMsg(new PlayerMessage(
-                    COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT + COLOR_CHAR + "c\" not found.",
+                    COLOR_CHAR + "cPlayer \"" + COLOR_CHAR + "9" + msg.RECIPIENT.NAME + COLOR_CHAR + "c\" not found.",
                     msg.SENDER), false);
             return;
         }
@@ -234,8 +236,16 @@ public final class Messenger {
     private void out(ServerListUpdate update) {
         for (Client client : aliveClients) {
             if (client.type == ClientType.APPLICATION
-                && client.auth && server.users.get(client.name).op) {
+                && client.auth) {
                 client.sendMsg(update, false);
+            }
+        }
+    }
+
+    private void out(UserPropertyChange propChange) {
+        for (Client client : aliveClients) {
+            if (client.type == ClientType.APPLICATION && propChange.RECIP.NAME.equals(client.name)) {
+                client.sendMsg(propChange, false);
             }
         }
     }

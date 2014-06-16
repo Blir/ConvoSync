@@ -177,7 +177,7 @@ public final class Client implements Runnable {
                                                       auth
                                                       ? null
                                                       : AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
-                                                      Main.VERSION), true);
+                                                      Main.VERSION, false));
             for (String element : authReq.PLAYERS) {
                 if (server.userMap.get(element) != null) {
                     Client client = server.getClient(element);
@@ -227,7 +227,7 @@ public final class Client implements Runnable {
                     reason = AuthenticationRequestResponse.Reason.INVALID_PASSWORD;
                 }
             }
-            sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION), true);
+            sendMsg(new AuthenticationRequestResponse(auth, reason, Main.VERSION, user == null ? false : user.op), true);
             if (auth) {
                 localname = (name = authReq.NAME);
                 messenger.out(name + " has joined.", this);

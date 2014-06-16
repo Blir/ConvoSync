@@ -59,7 +59,7 @@ public final class ConvoSyncServer {
     public static enum Command {
 
         EXIT, STOP, RESTART, RECONNECT, SETCOLOR, SETUSEPREFIX, KICK, LIST,
-        USERS, NAME, HELP, DEBUG, VERSION, CONFIG, CLIENT, CCMD
+        USERS, NAME, HELP, DEBUG, VERSION, CLIENT, CCMD
     }
 
     /**
@@ -152,6 +152,7 @@ public final class ConvoSyncServer {
                 dis = new DataInputStream(new FileInputStream(new File("users.dat")));
                 while (dis.available() > 0) {
                     User user = new User(dis.readUTF(), dis.readInt(), dis.readUTF());
+                    user.op = dis.readBoolean();
                     users.put(user.NAME, user);
                 }
             } finally {
@@ -185,7 +186,7 @@ public final class ConvoSyncServer {
                 }
             }
             String prop = p.getProperty("chat-color");
-            chatColor = prop.length() < 1 ? '\u0000' : prop.charAt(0);
+            chatColor = prop == null || prop.length() < 1 ? '\u0000' : prop.charAt(0);
             if (chatColor != '\u0000') {
                 LOGGER.log(Level.CONFIG, "Using chat color code \"{0}\"",
                            chatColor);
@@ -193,6 +194,14 @@ public final class ConvoSyncServer {
             prop = p.getProperty("use-prefixes");
             usePrefix = prop == null ? true : Boolean.parseBoolean(prop);
             LOGGER.log(Level.CONFIG, "Use prefixes set to {0}.", usePrefix);
+            pluginPassword = p.getProperty("plugin-password");
+            superPassword = p.getProperty("super-password");
+            name = p.getProperty("name");
+            try {
+                port = Integer.parseInt(p.getProperty("port"));
+            } catch (NumberFormatException ex) {
+                // ignore
+            }
         } catch (FileNotFoundException ex) {
             // ignore
         } catch (IOException ex) {
@@ -271,7 +280,7 @@ public final class ConvoSyncServer {
         }
 
         while (superPassword == null || superPassword.equals("")) {
-            System.out.println("Enter a password that the Super User will use to log in: ");
+            System.out.print("Enter a password that the Super User will use to log in: ");
             superPassword = in.nextLine();
         }
 
@@ -388,6 +397,7 @@ public final class ConvoSyncServer {
                             dos.writeUTF(user.NAME);
                             dos.writeInt(user.SALTED_HASH);
                             dos.writeUTF(user.SALT);
+                            dos.writeBoolean(user.op);
                         }
                     } finally {
                         if (dos != null) {
@@ -422,6 +432,10 @@ public final class ConvoSyncServer {
                         p.setProperty("chat-color",
                                       chatColor == '\u0000' ? "" : String.valueOf(chatColor));
                         p.setProperty("use-prefixes", String.valueOf(usePrefix));
+                        p.setProperty("plugin-password", pluginPassword);
+                        p.setProperty("super-password", superPassword);
+                        p.setProperty("name", name);
+                        p.setProperty("port", String.valueOf(port));
                         p.store(fos, null);
                     } finally {
                         if (fos != null) {
@@ -540,8 +554,9 @@ public final class ConvoSyncServer {
                                        + "/help                                - Prints all commands.\n"
                                        + "/debug                               - Toggles debug mode.\n"
                                        + "/version                             - Displays version info.\n"
-                                       + "/config                              - Generates the server config properties."
-                                       + "/ccmd <server name> <command> [args] - Executes the specified command on the specified server.");
+                                       + "/config                              - Generates the server config properties.\n"
+                                       + "/ccmd <server name> <command> [args] - Executes the specified command on the specified server.\n"
+                                       + "/client                              - Launches the ConvoSync client.");
                 break;
             case DEBUG:
                 LOGGER.log(Level.INFO, (debug = !debug) ? "Debug mode enabled."
@@ -558,28 +573,6 @@ public final class ConvoSyncServer {
                 break;
             case VERSION:
                 LOGGER.log(Level.INFO, "v{0}", Main.VERSION);
-                break;
-            case CONFIG:
-                Properties p = new Properties();
-                p.setProperty("plugin-password", pluginPassword);
-                p.setProperty("super-password", superPassword);
-                p.setProperty("name", name);
-                p.setProperty("port", String.valueOf(port));
-                FileOutputStream fos = null;
-                try {
-                    try {
-                        fos = new FileOutputStream("connection.properties");
-                        p.store(fos, null);
-                        LOGGER.log(Level.INFO, "Config generated.");
-                    } finally {
-                        if (fos != null) {
-                            fos.close();
-                        }
-                    }
-                } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "Could not generate config: {0}",
-                               ex.toString());
-                }
                 break;
             case CLIENT:
                 String[] clientArgs = new String[args.length + 2];
@@ -681,6 +674,7 @@ public final class ConvoSyncServer {
                                                    : !user.op))
                                        ? "{0} is now OP." : "{0} is no longer OP.",
                            user.NAME);
+                messenger.out(new UserPropertyChange(UserPropertyChange.Property.OP, user.op ? "true" : "false", new MessageRecipient(user.NAME, MessageRecipient.SenderType.CONVOSYNC_CLIENT)), null);
                 break;
             case UNREGISTER:
                 if (args.length < 0) {
