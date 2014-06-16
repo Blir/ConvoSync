@@ -14,7 +14,7 @@ public class Main {
     /**
      * The version of this ConvoSync suite.
      */
-    public static final String VERSION = "1.1.1-dev2.0";
+    public static final String VERSION = "1.1.2";
 
     public static final Random RNG = new Random();
 
