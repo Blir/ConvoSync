@@ -98,6 +98,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         output.setEditable(false);
         output.setColumns(20);
         output.setRows(5);
+        output.setMargin(new java.awt.Insets(2, 3, 2, 2));
         jScrollPane1.setViewportView(output);
 
         jSplitPane1.setLeftComponent(jScrollPane1);
