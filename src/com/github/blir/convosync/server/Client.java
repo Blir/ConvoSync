@@ -340,7 +340,7 @@ public final class Client implements Runnable {
                        new Object[]{localname, ex});
         }
         if (kick) {
-            messenger.out(name + " has been kicked.", this);
+            messenger.out(name + " has disconnected from the chat client.", this);
         }
         switch (type) {
             case PLUGIN:
