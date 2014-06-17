@@ -185,7 +185,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
         jMenuBar1.add(viewMenu);
 
-        optionsMenu.setText("Options");
+        optionsMenu.setText("Help");
         optionsMenu.setToolTipText("");
 
         helpMenuItem.setText("Help: https://github.com/Blir/ConvoSync/wiki");
