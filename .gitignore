@@ -1,8 +1,8 @@
 /build
 /nbproject/private
 /dist
-/CS-Client.log
-/CS-Client.log.lck
+/CS-Client*
+/CS-Server*
 
 # OS generated files #
 ######################
