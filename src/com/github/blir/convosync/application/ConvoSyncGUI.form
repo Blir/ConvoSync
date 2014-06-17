@@ -82,7 +82,7 @@
         </Menu>
         <Menu class="javax.swing.JMenu" name="optionsMenu">
           <Properties>
-            <Property name="text" type="java.lang.String" value="Options"/>
+            <Property name="text" type="java.lang.String" value="Help"/>
             <Property name="toolTipText" type="java.lang.String" value=""/>
           </Properties>
           <SubComponents>
