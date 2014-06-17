@@ -90,7 +90,6 @@ public class LoginGUI extends javax.swing.JFrame {
             }
         });
 
-        jTextField2.setText("xTrollx1337");
         jTextField2.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 onUserNameEntered(evt);
