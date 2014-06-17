@@ -81,7 +81,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
         timeStampsMenuItem = new javax.swing.JCheckBoxMenuItem();
         wordWrapMenuItem = new javax.swing.JCheckBoxMenuItem();
         adminConsoleMenuItem = new javax.swing.JMenuItem();
-        optionsMenu = new javax.swing.JMenu();
+        helpMenu = new javax.swing.JMenu();
         helpMenuItem = new javax.swing.JMenuItem();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
@@ -185,8 +185,8 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
 
         jMenuBar1.add(viewMenu);
 
-        optionsMenu.setText("Help");
-        optionsMenu.setToolTipText("");
+        helpMenu.setText("Help");
+        helpMenu.setToolTipText("");
 
         helpMenuItem.setText("Help: https://github.com/Blir/ConvoSync/wiki");
         helpMenuItem.addActionListener(new java.awt.event.ActionListener() {
@@ -194,9 +194,9 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
                 onHelp(evt);
             }
         });
-        optionsMenu.add(helpMenuItem);
+        helpMenu.add(helpMenuItem);
 
-        jMenuBar1.add(optionsMenu);
+        jMenuBar1.add(helpMenu);
 
         setJMenuBar(jMenuBar1);
 
@@ -413,6 +413,7 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JMenuItem changePasswordMenuItem;
     private javax.swing.JMenuItem clsMenuItem;
     private javax.swing.JMenu connectionMenu;
+    private javax.swing.JMenu helpMenu;
     private javax.swing.JMenuItem helpMenuItem;
     private javax.swing.JLabel infoLabel;
     private javax.swing.JTextField input;
@@ -421,7 +422,6 @@ public class ConvoSyncGUI extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JSplitPane jSplitPane1;
     private javax.swing.JMenuItem logOutMenuItem;
-    private javax.swing.JMenu optionsMenu;
     private javax.swing.JTextArea output;
     private javax.swing.JMenuItem reconnectMenuItem;
     private javax.swing.JCheckBoxMenuItem timeStampsMenuItem;
