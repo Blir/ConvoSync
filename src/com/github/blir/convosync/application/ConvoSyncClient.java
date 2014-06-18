@@ -220,7 +220,7 @@ public final class ConvoSyncClient {
 
     @Override
     public String toString() {
-        return "ConvoSyncClient " + Main.VERSION;
+        return "ConvoSync Client " + Main.VERSION;
     }
 
     private class InputTask implements Runnable {

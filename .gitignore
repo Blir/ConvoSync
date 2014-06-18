@@ -3,6 +3,7 @@
 /dist
 /CS-Client*
 /CS-Server*
+/login.properties
 
 # OS generated files #
 ######################
