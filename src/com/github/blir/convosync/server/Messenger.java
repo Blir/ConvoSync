@@ -33,7 +33,7 @@ public final class Messenger {
     protected Messenger(ConvoSyncServer server) {
         this.server = server;
         this.aliveClients = server.clients;
-        this.userMap = server.userMap;
+        this.userMap = server.playerMap;
     }
 
     /**

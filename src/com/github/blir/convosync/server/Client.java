@@ -137,7 +137,7 @@ public final class Client implements Runnable {
             PlayerListMessage list = (PlayerListMessage) msg;
             if (list.JOIN) {
                 for (String element : list.LIST) {
-                    String value = server.userMap.get(element);
+                    String value = server.playerMap.get(element);
                     if (value != null) {
                         Client client = server.getClient(element);
                         if (client == null) {
@@ -153,11 +153,11 @@ public final class Client implements Runnable {
                             messenger.deadClients.add(client);
                         }
                     }
-                    server.userMap.put(element, localname);
+                    server.playerMap.put(element, localname);
                 }
             } else {
                 for (String element : list.LIST) {
-                    server.userMap.remove(element);
+                    server.playerMap.remove(element);
                 }
             }
             messenger.sendPlayerListUpdate();
@@ -179,13 +179,13 @@ public final class Client implements Runnable {
                                                       : AuthenticationRequestResponse.Reason.INVALID_PASSWORD,
                                                       Main.VERSION, false));
             for (String element : authReq.PLAYERS) {
-                if (server.userMap.get(element) != null) {
+                if (server.playerMap.get(element) != null) {
                     Client client = server.getClient(element);
                     if (client == null) {
                         LOGGER.log(Level.WARNING,
                                    "{0} is already logged on {1}.",
                                    new Object[]{element,
-                                                server.userMap.get(element)});
+                                                server.playerMap.get(element)});
                     } else {
                         messenger.out(new PlayerMessage(
                                 "You cannot be logged into the client and the game simultaneously.",
@@ -194,7 +194,7 @@ public final class Client implements Runnable {
                                      new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                     }
                 }
-                server.userMap.put(element, localname);
+                server.playerMap.put(element, localname);
             }
             messenger.out(name + " has connected.", this);
             messenger.sendPlayerListUpdate();
@@ -217,7 +217,7 @@ public final class Client implements Runnable {
                     if (server.banlist.contains(authReq.NAME)) {
                         reason = AuthenticationRequestResponse.Reason.BANNED;
                     } else {
-                        if (server.userMap.get(authReq.NAME) == null) {
+                        if (server.playerMap.get(authReq.NAME) == null) {
                             auth = true;
                         } else {
                             reason = AuthenticationRequestResponse.Reason.LOGGED_IN;
@@ -231,7 +231,7 @@ public final class Client implements Runnable {
             if (auth) {
                 localname = (name = authReq.NAME);
                 messenger.out(name + " has joined.", this);
-                server.userMap.put(name, "CS-Client");
+                server.playerMap.put(name, "CS-Client");
                 messenger.sendPlayerListUpdate();
                 messenger.sendServerListUpdate();
             }
@@ -255,7 +255,11 @@ public final class Client implements Runnable {
             }
         } else if (msg instanceof UserRegistration) {
             UserRegistration reg = (UserRegistration) msg;
-            server.users.remove(reg.USER);
+            String oldName = server.uuids.get(reg.UUID);
+            if (oldName != null && !oldName.equals(reg.USER)) {
+                server.users.remove(oldName);
+            }
+            server.uuids.put(reg.UUID, reg.USER);
             server.users.put(reg.USER, new User(reg));
             sendMsg(new PlayerMessage(
                     COLOR_CHAR + "aYou've successfully registered.",
@@ -264,17 +268,18 @@ public final class Client implements Runnable {
             UserPropertyChange prop = (UserPropertyChange) msg;
             switch (prop.PROPERTY) {
                 case PASSWORD:
+                    User oldUser = server.users.get(name);
                     server.users.remove(name);
-                    server.users.put(name, new User(name, prop.VALUE, ConvoSyncServer.randomString(100)));
+                    server.users.put(name, new User(oldUser.uuid, name, prop.VALUE, ConvoSyncServer.randomString(100)));
                     sendMsg(new PlayerMessage("Password changed.", name), false);
                     break;
             }
         } else if (msg instanceof UserListRequest) {
             String sender = ((UserListRequest) msg).SENDER;
             sendMsg(new PlayerMessage(COLOR_CHAR + "aAll known online users:", sender), false);
-            for (String user : server.userMap.keySet()) {
+            for (String user : server.playerMap.keySet()) {
                 sendMsg(new PlayerMessage(
-                        COLOR_CHAR + "a" + user + " on server " + server.userMap.get(
+                        COLOR_CHAR + "a" + user + " on server " + server.playerMap.get(
                                 user), sender), false);
             }
         } else if (msg instanceof DisconnectMessage) {
@@ -344,10 +349,10 @@ public final class Client implements Runnable {
         }
         switch (type) {
             case PLUGIN:
-                server.userMap.values().removeAll(Collections.singleton(localname));
+                server.playerMap.values().removeAll(Collections.singleton(localname));
                 break;
             case APPLICATION:
-                server.userMap.remove(name);
+                server.playerMap.remove(name);
                 break;
         }
         if (update) {

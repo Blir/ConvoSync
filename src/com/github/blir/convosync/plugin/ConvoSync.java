@@ -286,12 +286,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             }
             if (sender instanceof Player) {
                 pm(new MessageRecipient(args[0]),
-                    new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
-                    sb.toString().substring(1));
+                   new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
+                   sb.toString().substring(1));
             } else {
                 pm(new MessageRecipient(args[0]),
-                    new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
-                    sb.toString().substring(1));
+                   new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                   sb.toString().substring(1));
             }
             return true;
         } else if (cmd.getName().equals("ctellr") && args.length > 0) {
@@ -317,12 +317,12 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             }
             if (sender instanceof Player) {
                 pm(new MessageRecipient(to),
-                    new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
-                    sb.toString().substring(1));
+                   new MessageRecipient(sender.getName(), MessageRecipient.SenderType.MINECRAFT_PLAYER),
+                   sb.toString().substring(1));
             } else {
                 pm(new MessageRecipient(to),
-                    new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
-                    sb.toString().substring(1));
+                   new MessageRecipient(getServer().getServerName(), MessageRecipient.SenderType.MINECRAFT_CONSOLE),
+                   sb.toString().substring(1));
             }
             return true;
         } else if (cmd.getName().equals("ccmd") && args.length > 1) {
@@ -404,15 +404,15 @@ public final class ConvoSync extends JavaPlugin implements Listener {
             StringBuilder sb = new StringBuilder(
                     new String[]{"poptarts", "fedora", "oops", "potato",
                                  "cabbage", "redhat", "pinkypie", "fluttershy",
-                                 "badwolf", "iPassword", "tuesday", "tardis",
-                                 "mycroft", "cafebabe", "steve", "herobrine",
-                                 "creeper", "cthulhu", "zezima", "zelda",
-                                 "hyrule"}[Main.RNG.nextInt(21)]);
+                                 "badwolf", "tuesday", "tardis", "mycroft",
+                                 "cafebabe", "steve", "herobrine", "creeper",
+                                 "cthulhu", "zezima", "zelda", "hyrule",
+                                 "gavin", "mogar"}[Main.RNG.nextInt(22)]);
             for (int idx = 0; idx < 4; idx++) {
                 sb.append((char) (Main.RNG.nextInt(10) + 48));
             }
             String newPassword = sb.toString();
-            out(new UserRegistration(sender.getName(), newPassword, randomString(100)), false);
+            out(new UserRegistration(((Player) sender).getUniqueId(), sender.getName(), newPassword, randomString(100)), false);
             sender.sendMessage(ChatColor.GREEN + "Attempting to register with password \""
                                + ChatColor.BLUE + newPassword + ChatColor.GREEN + "\".");
             return true;
@@ -557,7 +557,7 @@ public final class ConvoSync extends JavaPlugin implements Listener {
     }
 
     private boolean pm(MessageRecipient recip, MessageRecipient sender,
-                        String msg) {
+                       String msg) {
         return out(new PrivateMessage(recip, sender, msg, getServer().getServerName()), false);
     }
 

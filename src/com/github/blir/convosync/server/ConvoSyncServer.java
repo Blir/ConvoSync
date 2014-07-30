@@ -31,15 +31,21 @@ public final class ConvoSyncServer {
      * Controls whether prefixes are used for plugin clients in chat.
      */
     protected boolean usePrefix = true;
-    protected final List<Client> clients = Collections.synchronizedList(new ArrayList<Client>());
+    protected final List<Client> clients = Collections.synchronizedList(new LinkedList<Client>());
     protected String name = "ConvoSyncServer", pluginPassword, superPassword;
-    protected Map<String, String> userMap = new HashMap<String, String>();
+
     /**
-     * List of registered ConvoSyncClient users.
+     * Map of Minecraft players to the server they are playing on, or
+     * "CS-Client" if they are logged into the client.
+     */
+    protected Map<String, String> playerMap = new HashMap<String, String>();
+    /**
+     * Map of registered ConvoSyncClient users.
      */
     protected Map<String, User> users = new HashMap<String, User>();
+    protected Map<UUID, String> uuids = new HashMap<UUID, String>();
     /**
-     * List of the Minecraft user names of banned ConvoSyncClient users.
+     * List of the Minecraft UUIDs of banned ConvoSyncClient users.
      */
     protected List<String> banlist = new LinkedList<String>();
     /**
@@ -151,9 +157,10 @@ public final class ConvoSyncServer {
             try {
                 dis = new DataInputStream(new FileInputStream(new File("users.dat")));
                 while (dis.available() > 0) {
-                    User user = new User(dis.readUTF(), dis.readInt(), dis.readUTF());
+                    User user = new User(dis.readUTF(), dis.readUTF(), dis.readInt(), dis.readUTF());
+                    uuids.put(user.uuid, user.name);
                     user.op = dis.readBoolean();
-                    users.put(user.NAME, user);
+                    users.put(user.name, user);
                 }
             } finally {
                 if (dis != null) {
@@ -284,9 +291,9 @@ public final class ConvoSyncServer {
             superPassword = in.nextLine();
         }
 
-        superUser = new User("~", superPassword, randomString(25));
+        superUser = new User(UUID.randomUUID(), "~", superPassword, randomString(25));
         superUser.op = true;
-        users.put(superUser.NAME, superUser);
+        users.put(superUser.name, superUser);
 
         try {
             open();
@@ -352,7 +359,7 @@ public final class ConvoSyncServer {
             // ignore
         }
         messenger.out(new DisconnectMessage(reason), null);
-        userMap.clear();
+        playerMap.clear();
         clients.clear();
         if (reason != DisconnectMessage.Reason.RESTARTING) {
             System.exit(0);
@@ -387,14 +394,15 @@ public final class ConvoSyncServer {
             case EXIT:
             case STOP:
                 open = false;
-                users.remove(superUser.NAME);
+                users.remove(superUser.name);
                 // save user data
                 try {
                     DataOutputStream dos = null;
                     try {
                         dos = new DataOutputStream(new FileOutputStream(new File("users.dat")));
                         for (User user : users.values()) {
-                            dos.writeUTF(user.NAME);
+                            dos.writeUTF(user.uuid.toString());
+                            dos.writeUTF(user.name);
                             dos.writeInt(user.SALTED_HASH);
                             dos.writeUTF(user.SALT);
                             dos.writeBoolean(user.op);
@@ -636,13 +644,13 @@ public final class ConvoSyncServer {
         LOGGER.log(Level.INFO, "Executing sub-command {0}", subCmd);
         switch (subCmd) {
             case LIST:
-                if (userMap.isEmpty()) {
+                if (playerMap.isEmpty()) {
                     LOGGER.log(Level.INFO, "No known online users.");
                 } else {
                     LOGGER.log(Level.INFO,
                                "All known online users ({0}):",
-                               userMap.size());
-                    for (Map.Entry<String, String> entry : userMap.entrySet()) {
+                               playerMap.size());
+                    for (Map.Entry<String, String> entry : playerMap.entrySet()) {
                         LOGGER.log(Level.INFO, "User {0} on server {1}",
                                    new String[]{entry.getKey(), entry.getValue()});
                     }
@@ -655,7 +663,7 @@ public final class ConvoSyncServer {
                                users.size());
                     for (User user : users.values()) {
                         LOGGER.log(Level.INFO, "User: {0} OP: {1}",
-                                   new Object[]{user.NAME, user.op});
+                                   new Object[]{user.name, user.op});
                     }
                 }
                 break;
@@ -673,8 +681,8 @@ public final class ConvoSyncServer {
                                                    ? Boolean.parseBoolean(args[1])
                                                    : !user.op))
                                        ? "{0} is now OP." : "{0} is no longer OP.",
-                           user.NAME);
-                messenger.out(new UserPropertyChange(UserPropertyChange.Property.OP, user.op ? "true" : "false", new MessageRecipient(user.NAME, MessageRecipient.SenderType.CONVOSYNC_CLIENT)), null);
+                           user.name);
+                messenger.out(new UserPropertyChange(UserPropertyChange.Property.OP, user.op ? "true" : "false", new MessageRecipient(user.name, MessageRecipient.SenderType.CONVOSYNC_CLIENT)), null);
                 break;
             case UNREGISTER:
                 if (args.length < 0) {
@@ -688,7 +696,7 @@ public final class ConvoSyncServer {
                         client.close(true, true, true,
                                      new DisconnectMessage(DisconnectMessage.Reason.KICKED));
                     }
-                    users.remove(user.NAME);
+                    users.remove(user.name);
                     LOGGER.log(Level.INFO, "{0} unregistered.", args[0]);
                 } else {
                     LOGGER.log(Level.INFO, "No such user: {0}", args[0]);
